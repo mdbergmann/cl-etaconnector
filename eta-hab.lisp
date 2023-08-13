@@ -61,13 +61,13 @@
     (future:fcompleted
         (item:get-value total-item)
         (value)
-      (unless value
+      (unless (numberp value)
         (setf value 0))
       (multiple-value-bind (new-state new-daily)
           (eta-helper:solar-read-total value)
-        (item:set-value total-item new-state :push nil)
         (log:info "Solar total: ~a" new-state)
         (log:info "Solar daily: ~a" new-daily)
+        (item:set-value total-item new-state :push nil)
         ;;(openhab:do-post "SolarPowerTotalDay" new-daily)
         ))))
 
