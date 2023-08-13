@@ -469,7 +469,7 @@ Returns monitor items."
 (defparameter *openhab-solar-power-day-total-item* "SolarPowerTotalDay")
 
 
-(defstruct solar-state
+(Defstruct solar-state
   (total-wh 0 :type integer))
 
 (defun solar-init ()

@@ -20,6 +20,9 @@
     (lambda (id)
       (make-simple-persistence id :storage-root-path "default-simple-persistence")))
 
+;; ---------------------
+;; Zisterne
+;; ---------------------
 (defitem 'zist-sensor-curr "ZistSensorCurrency"
   (binding :initial-delay 5
            :delay 60
@@ -33,3 +36,43 @@
                  :frequency :every-change
                  :load-on-start t))
 
+;; ---------------------
+;; Solar
+;; ---------------------
+(defitem 'sol-power-total-day "SolarPowerTotalDay"
+  :persistence '(:id :default
+                 :frequency :every-change
+                 :load-on-start t))
+(defitem 'sol-power-mom "SolarPowerMom"
+  (binding :initial-delay 5
+           :delay 30
+           :pull (lambda () (eta-helper:solar-read))
+           :push (lambda (value)
+                   (log:debug "Pushing value: ~a" value)
+                   ;;(openhab:do-post "SolarPowerMom" value)
+                   )
+           :pull-passthrough t)
+  :persistence '(:id :default
+                 :frequency :every-change
+                 :load-on-start t))
+
+(defun %calc-solar-total ()
+  (let ((total-item (gethash 'sol-power-total-day *items*)))
+    (future:fcompleted
+        (item:get-value total-item)
+        (value)
+      (unless value
+        (setf value 0))
+      (multiple-value-bind (new-state new-daily)
+          (eta-helper:solar-read-total value)
+        (item:set-value total-item new-state :push nil)
+        (log:info "Solar total: ~a" new-state)
+        (log:info "Solar daily: ~a" new-daily)
+        ;;(openhab:do-post "SolarPowerTotalDay" new-daily)
+        ))))
+
+(defrule "Calc-Solar-Total"
+  :when-cron '(:minute 50 :hour 23)
+  :do (lambda (trigger)
+        (declare (ignore trigger))
+        (%calc-solar-total)))
