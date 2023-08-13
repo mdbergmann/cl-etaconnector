@@ -1,11 +1,11 @@
-(defpackage :cl-hab.tests
+(defpackage :cl-eta.tests
   (:use :cl :fiveam)
   (:export #:run!
            #:all-tests
            #:nil
            #:test-suite))
 
-(in-package :cl-hab.tests)
+(in-package :cl-eta.tests)
 
 (def-suite test-suite
   :description "All catching test suite.")

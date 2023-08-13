@@ -7,7 +7,6 @@
                "drakma"
                "bit-smasher"
                "py4cl"
-               "yason"
                )
   :components ((:module "src"
                 :serial t
@@ -74,4 +73,4 @@ OK - store and load state of eta actor
 
 - filter temp values for spikes
 - implement more receive package types (error, etc)
-#|
+|#
