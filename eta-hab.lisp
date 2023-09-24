@@ -66,4 +66,61 @@
   :do (lambda (trigger)
         (declare (ignore trigger))
         (eta-helper:calc-solar-total
-         (gethash 'sol-power-total-day *items*))))
+         (get-item 'sol-power-total-day))))
+
+;; ---------------------
+;; Eta
+;; ---------------------
+
+;; (defitem 'eta-op-hours "HeatingETAOperatingHours"
+;;   (binding :push (lambda (value)
+;;                    (log:debug "Pushing value: ~a" value)
+;;                    ;;(openhab:do-post "HeatingETAOperatingHours" value)
+;;                    )
+;;            :call-push-p t)
+;;   :persistence '(:id :default
+;;                  :frequency :every-change
+;;                  :load-on-start t))
+;; (defitem 'eta-ign-count "HeatingETAIgnitionCount"
+;;   (binding :push (lambda (value)
+;;                    (log:debug "Pushing value: ~a" value)
+;;                    ;;(openhab:do-post "HeatingETAIgnitionCount" value)
+;;                    )
+;;            :call-push-p t)
+;;   :persistence '(:id :default
+;;                  :frequency :every-change
+;;                  :load-on-start t))
+
+(defitem 'eta-do-read-monitors "ETA Heating read monitors flag"
+  (binding :pull (lambda () nil))
+  :persistence '(:id :default
+                 :frequency :every-change
+                 :load-on-start t))
+
+;; use collection item to pull repeatedly (every 20 seconds.) until complete package.
+(defitem 'eta-read-pkg "ETA package reader item"
+  (binding :initial-delay 5
+           :delay 20
+           :pull (lambda () )))
+
+
+(defvar *eta-read-monitors* nil)
+(defrule "Read-ETA-serial"
+  :when-item-change 'eta-do-read-monitors
+  :do (lambda (trigger)
+        (case (car trigger)
+          (:item (let ((item (cdr trigger)))
+                   (future:fcompleted
+                       (item:get-value item)
+                       (result)
+                     (cond
+                       ((and result (not *eta-read-monitors*))
+                        ;; start reading
+                        )
+                       ((and (not result) *eta-read-monitors*)
+                        ;; stop reading
+                        ))
+                     (setf *eta-read-monitors* result)
+                     (when *eta-read-monitors*
+                       ;; continue reading
+                       )))))))

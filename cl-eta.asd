@@ -18,6 +18,7 @@
                  (:file "solar-if")
                  (:file "eta-pkg")
                  (:file "eta")
+                 (:file "eta-helper")
                  )))
   :in-order-to ((test-op (test-op "cl-eta/tests"))))
 

@@ -7,7 +7,9 @@
 
 (in-package :cl-eta.helper)
 
+;; ----------------------------------------
 ;; zisterne
+;; ----------------------------------------
 
 (defun ina-read ()
   (log:debug "Reading ina currency...")
@@ -22,7 +24,9 @@
       (otherwise
        (error "Read of ina not OK, value: ~a" currency)))))
 
+;; ----------------------------------------
 ;; solar
+;; ----------------------------------------
 
 (defmacro %read-solar-power ((stat power total) pred &body body)
   `(progn
@@ -66,5 +70,7 @@
       (log:info "Solar daily: ~a" new-daily)
       (item:set-value total-item new-state))))
 
+;; ----------------------------------------
 ;; eta
+;; ----------------------------------------
 
