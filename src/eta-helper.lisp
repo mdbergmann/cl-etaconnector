@@ -2,14 +2,27 @@
   (:use :cl)
   (:nicknames :eta-helper)
   (:export #:ina-read
+           #:ina-init
            #:solar-read
-           #:calc-solar-total))
+           #:calc-solar-total
+           #:eta-init
+           #:eta-read-sensors))
 
 (in-package :cl-eta.helper)
 
 ;; ----------------------------------------
 ;; zisterne
 ;; ----------------------------------------
+
+(defun ina-init ()
+  (log:debug "Initializing ina...")
+  (case (ina219-if:init)
+    (:ok
+     (progn
+       (log:info "Initializing ina...done")
+       t))
+    (otherwise
+     (error "Initializing ina...failed"))))
 
 (defun ina-read ()
   (log:debug "Reading ina currency...")
@@ -47,30 +60,32 @@
 
 (defun solar-read ()
   (%read-solar-power (stat power _total)
-                      (and (numberp power) (> power 0))
+                     (and (numberp power) (> power 0))
     (round power)))
 
-(defun solar-read-total (old-value)
+(defun solar-read-total (old-total)
   (%read-solar-power (stat _power total)
                      (and (numberp total) (> total 0))
     (let* ((new-rounded-total (round total))
-           (old-total old-value)
            (new-daily (- new-rounded-total old-total)))
       (values new-rounded-total new-daily))))
 
-(defun calc-solar-total (total-item)
-  (future:fcompleted
-      (item:get-value total-item)
-      (value)
-    (unless (numberp value)
-      (setf value 0))
-    (multiple-value-bind (new-state new-daily)
-        (solar-read-total value)
-      (log:info "Solar total: ~a" new-state)
-      (log:info "Solar daily: ~a" new-daily)
-      (item:set-value total-item new-state))))
+(defun calc-solar-total (old-total)
+  (unless (numberp old-total)
+    (setf old-total 0))
+  (multiple-value-bind (new-total new-daily)
+      (solar-read-total old-total)
+    (log:info "Solar total: ~a" new-total)
+    (log:info "Solar daily: ~a" new-daily)
+    new-total))
 
 ;; ----------------------------------------
 ;; eta
 ;; ----------------------------------------
 
+(defun eta-init ()
+  (log:debug "Initializing eta...")
+  (log:info "Initializing eta...done"))
+
+(defun eta-read-sensors ()
+  )

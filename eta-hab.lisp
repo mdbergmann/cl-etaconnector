@@ -6,7 +6,9 @@
   (:import-from #:cl-hab.persistence
                 #:persistence)
   (:import-from #:cl-hab.simple-persistence
-                #:make-simple-persistence))
+                #:make-simple-persistence)
+  (:import-from #:cl-hab.influx-persistence
+                #:make-influx-persistence))
 (in-package :eta-hab)
 
 (log:config :warn :sane :this-console :daily "logs/app.log")
@@ -19,11 +21,19 @@
 (defpersistence :default
     (lambda (id)
       (make-simple-persistence id :storage-root-path "default-simple-persistence")))
+(defpersistence :influx
+    (lambda (id)
+      (make-influx-persistence
+       id
+       :base-url "http://picellar:8086"
+       :token "A005mInE0uPMoW6l-kHmsxX1l8XC14Uw0UyAjV20GDq7qev0M1-kaGy77M7JH7wsIrc3-rTm1hRoHZ735Q4tHw=="
+       :org "mabe"
+       :bucket "hab")))
 
 ;; ---------------------
 ;; Zisterne
 ;; ---------------------
-(defitem 'zist-sensor-curr "ZistSensorCurrency"
+(defitem 'zist-sensor-curr "ZistSensorCurrency" 'float
   (binding :initial-delay 5
            :delay 60
            :pull (lambda () (eta-helper:ina-read))
@@ -34,12 +44,14 @@
            :call-push-p t)
   :persistence '(:id :default
                  :frequency :every-change
-                 :load-on-start t))
+                 :load-on-start t)
+  :persistence '(:id :influx
+                 :frequency :every-change))
 
 ;; ---------------------
 ;; Solar
 ;; ---------------------
-(defitem 'sol-power-total-day "SolarPowerTotalDay"
+(defitem 'sol-power-total-day "SolarPowerTotalDay" 'integer
   (binding :push (lambda (value)
                    (log:debug "Pushing value: ~a" value)
                    ;;(openhab:do-post "SolarPowerTotalDay" value)
@@ -47,8 +59,10 @@
            :call-push-p t)
   :persistence '(:id :default
                  :frequency :every-change
-                 :load-on-start t))
-(defitem 'sol-power-mom "SolarPowerMom"
+                 :load-on-start t)
+  :persistence '(:id :influx
+                 :frequency :every-change))
+(defitem 'sol-power-mom "SolarPowerMom" 'integer
   (binding :initial-delay 5
            :delay 30
            :pull (lambda () (eta-helper:solar-read))
@@ -59,68 +73,65 @@
            :call-push-p t)
   :persistence '(:id :default
                  :frequency :every-change
-                 :load-on-start t))
+                 :load-on-start t)
+  :persistence '(:id :influx
+                 :frequency :every-change))
 
 (defrule "Calc-Solar-Total"
   :when-cron '(:minute 50 :hour 23)
   :do (lambda (trigger)
         (declare (ignore trigger))
-        (eta-helper:calc-solar-total
-         (get-item 'sol-power-total-day))))
+        (future:fcompleted
+            (item:get-value total-item)
+            (value)
+          (let ((new-total (eta-helper:calc-solar-total value)))
+            (log:debug "New total: ~a" new-total)
+            (item:set-value total-item new-total)))))
 
 ;; ---------------------
 ;; Eta
 ;; ---------------------
 
-;; (defitem 'eta-op-hours "HeatingETAOperatingHours"
-;;   (binding :push (lambda (value)
-;;                    (log:debug "Pushing value: ~a" value)
-;;                    ;;(openhab:do-post "HeatingETAOperatingHours" value)
-;;                    )
-;;            :call-push-p t)
-;;   :persistence '(:id :default
-;;                  :frequency :every-change
-;;                  :load-on-start t))
-;; (defitem 'eta-ign-count "HeatingETAIgnitionCount"
-;;   (binding :push (lambda (value)
-;;                    (log:debug "Pushing value: ~a" value)
-;;                    ;;(openhab:do-post "HeatingETAIgnitionCount" value)
-;;                    )
-;;            :call-push-p t)
-;;   :persistence '(:id :default
-;;                  :frequency :every-change
-;;                  :load-on-start t))
+(defparameter *eta-raw-items*
+  (list
+   ('eta-op-hours "HeatingETAOperatingHours" 'integer)
+   ('eta-ign-count "HeatingETAIgnitionCount" 'integer)
+   ('eta-temp-abgas "EtaAbgas" 'float)
+   ('eta-temp-aussen "EtaTempAussen" 'float)
+   ('eta-temp-boiler "EtaBoiler" 'float)
+   ('eta-temp-boiler-unten "EtaBoilerUnten" 'float)
+   ('eta-temp-boiler-untsolar "EtaBoilerUntSolar" 'float)
+   ('eta-temp-kessel "EtaKessel" 'float)
+   ('eta-temp-kessel-rueck "EtaKesselRuecklauf" 'float)
+   ('eta-temp-kollektor "EtaKollektor" 'float)
+   ('eta-temp-puffer-oben "EtaPufferOben" 'float)
+   ('eta-temp-puffer-unten "EtaPufferUnten" 'float)
+   ('eta-temp-vorlaufmk0 "EtaVorlaufMK0" 'float)))
 
-(defitem 'eta-do-read-monitors "ETA Heating read monitors flag"
-  (binding :pull (lambda () nil))
-  :persistence '(:id :default
-                 :frequency :every-change
-                 :load-on-start t))
-
-;; use collection item to pull repeatedly (every 20 seconds.) until complete package.
-(defitem 'eta-read-pkg "ETA package reader item"
-  (binding :initial-delay 5
-           :delay 20
-           :pull (lambda () )))
+(dolist (i *eta-raw-items*)
+  (defitem (first i) (second i) (third i)
+    (binding :push (lambda (value)
+                     (log:debug "Pushing value: ~a" value)
+                     ;;(openhab:do-post "HeatingETAOperatingHours" value)
+                     )
+             :call-push-p t)
+    :persistence '(:id :default
+                   :frequency :every-change
+                   :load-on-start t)
+    :persistence '(:id :influx
+                   :frequency :every-change)))
 
 
-(defvar *eta-read-monitors* nil)
-(defrule "Read-ETA-serial"
-  :when-item-change 'eta-do-read-monitors
+(defrule "Init externals"
+  :when-cron '(:bootonly t)
   :do (lambda (trigger)
-        (case (car trigger)
-          (:item (let ((item (cdr trigger)))
-                   (future:fcompleted
-                       (item:get-value item)
-                       (result)
-                     (cond
-                       ((and result (not *eta-read-monitors*))
-                        ;; start reading
-                        )
-                       ((and (not result) *eta-read-monitors*)
-                        ;; stop reading
-                        ))
-                     (setf *eta-read-monitors* result)
-                     (when *eta-read-monitors*
-                       ;; continue reading
-                       )))))))
+        (declare (ignore trigger))
+        (eta-helper:ina-init)
+        (eta-helper:eta-init)))
+
+(defrule "Read-ETA-serial"
+  :when-cron '() ; this is every minute, the lowest granularity.
+  :do (lambda (trigger)
+        (declare (ignore trigger))
+        
+        ))
