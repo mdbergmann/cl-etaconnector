@@ -59,25 +59,19 @@
           (error "Read of solar not OK!"))))))
 
 (defun solar-read ()
-  (%read-solar-power (stat power _total)
-                     (and (numberp power) (> power 0))
-    (round power)))
-
-(defun solar-read-total (old-total)
-  (%read-solar-power (stat _power total)
-                     (and (numberp total) (> total 0))
-    (let* ((new-rounded-total (round total))
-           (new-daily (- new-rounded-total old-total)))
-      (values new-rounded-total new-daily))))
+  (%read-solar-power (stat power total)
+                     (and (numberp power) (> power 0)
+                          (numberp total) (> total 0))
+    (values (round power) (round total))))
 
 (defun calc-solar-total (old-total)
-  (unless (numberp old-total)
-    (setf old-total 0))
-  (multiple-value-bind (new-total new-daily)
-      (solar-read-total old-total)
-    (log:info "Solar total: ~a" new-total)
-    (log:info "Solar daily: ~a" new-daily)
-    new-total))
+  (multiple-value-bind (_power total)
+      (solar-read)
+    (declare (ignore _power))
+    (let ((new-daily (- total old-total)))
+      (log:info "Solar total: ~a" total)
+      (log:info "Solar daily: ~a" new-daily)
+      (values total new-daily))))
 
 ;; ----------------------------------------
 ;; eta
@@ -85,6 +79,7 @@
 
 (defun eta-init ()
   (log:debug "Initializing eta...")
+  ;; (eta:start-record)
   (log:info "Initializing eta...done"))
 
 (defun eta-read-sensors ()

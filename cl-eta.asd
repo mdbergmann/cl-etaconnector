@@ -34,10 +34,8 @@
                 :components
                 ((:file "all-tests")
                  (:file "eta-test")
-                 (:file "ina-test")
-                 (:file "solar-test")
+                 (:file "eta-helper-test")
                  (:file "eta-pkg-test")
-                 (:file "eta-atest")
                  )))
   :description "Test system for cl-eta"
   :perform (test-op (op c) (symbol-call :fiveam :run!

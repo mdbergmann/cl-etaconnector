@@ -1,5 +1,5 @@
 (defpackage :cl-eta.eta-helper-test
-  (:use :cl :fiveam :cl-mock :cl-eta.helper :cl-eta.eta :miscutils)
+  (:use :cl :fiveam :cl-mock :cl-eta.helper :miscutils)
   (:export #:run!
            #:all-tests
            #:nil))
@@ -50,3 +50,21 @@
       (error () (is-true t))
       (:no-error () (is-true nil)))
     (is (= (length (invocations 'ina219-if:read-currency)) 1))))
+
+;; --------------------------------------
+;; Solar interface tests
+;; --------------------------------------
+
+(test solar-retrieves-power
+  (with-mocks ()
+    (answer solar-if:read-power (values :ok 101.23 1234.56))
+
+    (is (equalp '(101 1235) (multiple-value-list (solar-read))))
+    (is (= (length (invocations 'solar-if:read-power)) 1))))
+
+(test solar-calculates-new-total
+  (with-mocks ()
+    (answer solar-if:read-power (values :ok 101.23 1234.56))
+    (is (equalp '(1235 235)
+                (multiple-value-list
+                 (calc-solar-total 1000))))))

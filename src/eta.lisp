@@ -2,19 +2,15 @@
   (:use :cl)
   (:nicknames :eta)
   (:export #:eta-init
-           #:eta-stop
-           #:*eta-serial-proxy-impl*
+           #:eta-close
+           #:eta-write
+           #:eta-read-monitors
            #:*eta-serial-device*))
 
 (in-package :cl-eta.eta)
 
-;; ---------------------
-;; eta-serial
-;; ---------------------
-
 (defvar *eta-serial-device* "/dev/ttyUSB0")
 (defvar *eta-serial-port* nil)
-(defvar *eta-serial-proxy-impl* nil)
 (defvar +eta-new-empty-data+ #())
 
 (defun %process-complete-pkg (pkg-data)
@@ -36,35 +32,30 @@ Returns monitor items, car item name, cdr item value."
                    (log:info "Unknown extract pkg result!")
                    nil)))))
 
-(defun eta-destroy ()
-  (setf *eta-serial-proxy-impl* nil))
-
 (defun eta-init ()
   (setf *eta-serial-port*
-        (eta-ser-if:open-serial *eta-serial-proxy-impl* *eta-serial-device*)))
+        (eta-ser-if:open-serial *eta-serial-device*))
+  :ok)
 
 (defun eta-close ()
-  (eta-ser-if:close-serial *eta-serial-proxy-impl* *eta-serial-port*))
+  (eta-ser-if:close-serial *eta-serial-port*)
+  :ok)
 
 (defun eta-write (data)
-  (eta-ser-if:write-serial *eta-serial-proxy-impl* *eta-serial-port* data))
+  (values :ok (eta-ser-if:write-serial *eta-serial-port* data)))
 
 (defvar *eta-serial-data* nil)
-(defun eta-read (actor)
-  (let ((result
-          (eta-ser-if:read-serial *eta-serial-proxy-impl* *eta-serial-port*)))
-    (log:debug "eta read result: ~a" result)
+(defun eta-read-monitors ()
+  (let ((read-data
+          (eta-ser-if:read-serial *eta-serial-port*)))
+    (log:debug "eta read result: ~a" read-data)
     (let* ((serial-data *eta-serial-data*)
            (new-serial-data
-             (handler-case
-                 (multiple-value-bind (complete data)
-                     (eta-pkg:collect-data serial-data read-data)
-                   (if complete
-                       (let ((mon-items (%process-complete-pkg data)))
-                         +eta-new-empty-data+)
-                       data))
-               (error (c)
-                 (progn
-                   (log:warn "Error collecting data: ~a" c)
-                   state)))))
+             (multiple-value-bind (complete data)
+                 (eta-pkg:collect-data serial-data read-data)
+               (if complete
+                   (progn
+                     (%process-complete-pkg data)
+                     +eta-new-empty-data+)
+                   data))))
       (setf *eta-serial-data* new-serial-data))))

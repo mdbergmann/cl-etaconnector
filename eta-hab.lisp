@@ -77,16 +77,18 @@
   :persistence '(:id :influx
                  :frequency :every-change))
 
-(defrule "Calc-Solar-Total"
+(defrule "Calc-Daily-Solar-Total"
   :when-cron '(:minute 50 :hour 23)
   :do (lambda (trigger)
         (declare (ignore trigger))
-        (future:fcompleted
-            (item:get-value total-item)
-            (value)
-          (let ((new-total (eta-helper:calc-solar-total value)))
-            (log:debug "New total: ~a" new-total)
-            (item:set-value total-item new-total)))))
+        (let ((total-item (get-item 'sol-power-total-day)))
+          (future:fcompleted
+              (item:get-value total-item)
+              (value)
+            (multiple-value-bind (_total daily)
+                (eta-helper:calc-solar-total value)
+              (decare (ignore _total))
+              (item:set-value total-item daily))))))
 
 ;; ---------------------
 ;; Eta
