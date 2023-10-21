@@ -94,25 +94,38 @@
       (error (e)
         (is (string= (format nil "~a" e) "Can't write!"))))))
 
-;; (test start-record--serial-written--read-received--repeated
-;;   (with-fixture init-destroy ()
-;;     (is (eq :ok (eta-init)))
-;;     (is (eq :ok (eta-start-record)))
-;;     (is-true (miscutils:assert-cond
-;;               (lambda () (> *read-serial-called* 3))  ;; we check for 3
-;;               10.0))))
+(test eta-read-monitors--complete--empty-monitors
+  (with-mocks ()
+    (answer eta-ser-if:read-serial #(123 0 1 2 3 125))
+    (answer eta-pkg:extract-pkg (values :eta-monitor '()))
 
-;; (test start-record--read-received--call-parser
-;;   (with-fixture init-destroy ()
-;;     (is (eq :ok (eta-init)))
-;;     (with-mocks ()
-;;       (answer eta-pkg:collect-data (values nil #()))
-      
-;;       (is (eq :ok (eta-start-record)))
-;;       (is-true (miscutils:assert-cond
-;;               (lambda () (and (> *read-serial-called* 0)
-;;                          (> (length (invocations 'eta-pkg:collect-data)) 0)))
-;;               10.0)))))
+    (is (equalp '() (eta-read-monitors)))
+    (is (= 1 (length (invocations 'eta-ser-if:read-serial))))
+    (is (= 1 (length (invocations 'eta-pkg:extract-pkg))))))
+
+(test eta-read-monitors--complete--with-monitors
+  (with-mocks ()
+    (answer eta-ser-if:read-serial #(123 0 1 2 3 125))
+    (answer eta-pkg:extract-pkg (values :eta-monitor '(("FooItem" . 1.1))))
+
+    (is (equalp '(("FooItem" . 1.1)) (eta-read-monitors)))
+    (is (= 1 (length (invocations 'eta-ser-if:read-serial))))
+    (is (= 1 (length (invocations 'eta-pkg:extract-pkg))))))
+
+(test eta-read-monitors--incomplete-first-read--with-monitors
+  (with-mocks ()
+    (let ((read-count 0))
+      (answer eta-ser-if:read-serial
+        (prog1
+          (if (= read-count 0)
+              #(123 0 1 2 3)
+              #(125))
+          (incf read-count)))
+      (answer eta-pkg:extract-pkg (values :eta-monitor '(("FooItem" . 1.1))))
+
+      (is (equalp '(("FooItem" . 1.1)) (eta-read-monitors)))
+      (is (= 2 (length (invocations 'eta-ser-if:read-serial))))
+      (is (= 1 (length (invocations 'eta-pkg:extract-pkg)))))))
 
 ;; (test start-record--read-received--call-parser--no-complete
 ;;   (with-fixture init-destroy ()

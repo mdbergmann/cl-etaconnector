@@ -48,7 +48,7 @@ Underlying serial port can raise conditions."
 
 (defun %process-complete-pkg (pkg-data)
   "Transmits monitor items to openhab.
-Returns monitor items, car item name, cdr item value."
+Returns monitor items, car item name, cdr item value. Or `nil' if failed."
   (multiple-value-bind (pkg-type items)
       (eta-pkg:extract-pkg pkg-data)
     (case pkg-type
@@ -57,25 +57,21 @@ Returns monitor items, car item name, cdr item value."
                nil))
       (:eta-monitor (progn
                       (log:info "Monitor data: ~a" pkg-data)
-                      (dolist (item items)
-                        (log:info "Posting item: ~a, value: ~a" (car item) (cdr item)))
-                        ;(openhab:do-post (car item) (cdr item)))
                       items))
       (otherwise (progn
                    (log:info "Unknown extract pkg result!")
                    nil)))))
 
-(defun eta-read-monitors ()
+(defun eta-read-monitors (&optional (serial-data +eta-new-empty-data+))
   (let ((read-data
           (eta-ser-if:read-serial *eta-serial-port*)))
     (log:debug "eta read result: ~a" read-data)
-    (let* ((serial-data *eta-serial-data*)
-           (new-serial-data
-             (multiple-value-bind (complete data)
-                 (eta-pkg:collect-data serial-data read-data)
-               (if complete
-                   (progn
-                     (%process-complete-pkg data)
-                     +eta-new-empty-data+)
-                   data))))
-      (setf *eta-serial-data* new-serial-data))))
+    (multiple-value-bind (complete data)
+        (eta-pkg:collect-data serial-data read-data)
+      (if complete
+          (progn
+            (log:debug "eta complete data: ~a" data)
+            (%process-complete-pkg data))
+          (progn
+            (log:debug "eta incomplete data: ~a" data)
+            (eta-read-monitors data))))))
