@@ -1,5 +1,5 @@
 (defpackage :cl-eta.eta-test
-  (:use :cl :fiveam :cl-mock :cl-eta.eta)
+  (:use :cl :fiveam :cl-mock :eta)
   (:nicknames :eta-test)
   (:export #:run!
            #:all-tests
@@ -34,19 +34,65 @@
     (answer eta-ser-if:close-serial :ok)
     (is (eq :ok (eta-close)))))
 
+(test eta-close--err
+  (with-mocks ()
+    (answer eta-ser-if:close-serial (error "Can't close!"))
+    (handler-case
+        (progn 
+          (eta-close)
+          (error "Should not be here!"))
+      (error (e)
+        (is (string= (format nil "~a" e) "Can't close!"))))))
+
 (test eta-write
   (with-mocks ()
     (answer eta-ser-if:write-serial 10)
     (is (equalp '(:ok 10) (multiple-value-list
                            (eta-write #(1 2 3 4 5 6 7 8 9 10)))))))
 
-;; (test start-record--serial-written
-;;   (with-mocks ()
-;;     (is (eq :ok (eta-init)))
-;;     (is (eq :ok (eta-start-record)))
-;;     (is-true (miscutils:assert-cond
-;;               (lambda () (= (length (eta-pkg:new-start-record-pkg)) *write-serial-called*))
-;;               1.0))))
+(test eta-write--err
+  (with-mocks ()
+    (answer eta-ser-if:write-serial (error "Can't write!"))
+    (handler-case
+        (progn 
+          (eta-write #(1 2 3 4 5 6 7 8 9 10))
+          (error "Should not be here!"))
+      (error (e)
+        (is (string= (format nil "~a" e) "Can't write!"))))))
+
+(test eta-start-record--ok
+  (with-mocks ()
+    (answer (eta-ser-if:write-serial _port data)
+      (assert (equalp data (eta-pkg:new-start-record-pkg))))
+    (is (eq :ok (eta-start-record)))
+    (is (= 1 (length (invocations 'eta-ser-if:write-serial))))))
+
+(test eta-start-record--err
+  (with-mocks ()
+    (answer eta-ser-if:write-serial (error "Can't write!"))
+    (handler-case
+        (progn 
+          (eta-start-record)
+          (error "Should not be here!"))
+      (error (e)
+        (is (string= (format nil "~a" e) "Can't write!"))))))
+
+(test eta-stop-record--ok
+  (with-mocks ()
+    (answer (eta-ser-if:write-serial _port data)
+      (assert (equalp data (eta-pkg:new-stop-record-pkg))))
+    (is (eq :ok (eta-stop-record)))
+    (is (= 1 (length (invocations 'eta-ser-if:write-serial))))))
+
+(test eta-stop-record--err
+  (with-mocks ()
+    (answer eta-ser-if:write-serial (error "Can't write!"))
+    (handler-case
+        (progn 
+          (eta-stop-record)
+          (error "Should not be here!"))
+      (error (e)
+        (is (string= (format nil "~a" e) "Can't write!"))))))
 
 ;; (test start-record--serial-written--read-received--repeated
 ;;   (with-fixture init-destroy ()
