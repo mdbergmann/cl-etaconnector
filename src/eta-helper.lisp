@@ -89,16 +89,20 @@
   "Initializes serial port.
 Returns `:ok' if successful.
 Underlying serial port can raise conditions."
+  (log:info "Initializing serial port...")
   (setf *eta-serial-port*
         (eta-ser-if:open-serial *eta-serial-device*))
+  (log:info "Initializing serial port...done")
   :ok)
 
 (defun eta-close ()
   "Closes serial port.
 Returns `:ok' if successful.
 Underlying serial port can raise conditions."
+  (log:info "Closing serial port...")
   (eta-ser-if:close-serial *eta-serial-port*)
   (setf *eta-serial-port* nil)
+  (log:info "Closing serial port...done")
   :ok)
 
 (defun %eta-write (data)
@@ -109,11 +113,17 @@ Underlying serial port can raise conditions."
 
 (defun eta-start-record ()
   "Starts recording data from serial port."
-  (%eta-write (eta-pkg:new-start-record-pkg)))
+  (log:info "Starting record...")
+  (prog1
+      (%eta-write (eta-pkg:new-start-record-pkg))
+    (log:info "Starting record...done")))
 
 (defun eta-stop-record ()
   "Stops recording data from serial port."
-  (%eta-write (eta-pkg:new-stop-record-pkg)))
+  (log:info "Stopping record...")
+  (prog1
+      (%eta-write (eta-pkg:new-stop-record-pkg))
+    (log:info "Stopping record...done")))
 
 (defun %process-complete-pkg (pkg-data)
   "Transmits monitor items to openhab.
@@ -149,4 +159,7 @@ Returns monitor items, car item name, cdr item value. Or `nil' if failed."
 (defun eta-read-monitors ()
   "Reads monitor data from serial port.
 Returns monitor items, car item name, cdr item value. Or `nil' if failed."
-  (%eta-read-monitors +eta-new-empty-data+))
+  (log:info "eta read monitors...")
+  (prog1
+      (%eta-read-monitors +eta-new-empty-data+)
+    (log:info "eta read monitors...done")))
