@@ -63,6 +63,9 @@ Returns monitor items, car item name, cdr item value. Or `nil' if failed."
                    nil)))))
 
 (defun eta-read-monitors (&optional (serial-data +eta-new-empty-data+))
+  "Reads monitor data from serial port.
+Returns monitor items, car item name, cdr item value. Or `nil' if failed.
+This function is recursive, it will call itself until it receives a complete package."
   (let ((read-data
           (eta-ser-if:read-serial *eta-serial-port*)))
     (log:debug "eta read result: ~a" read-data)
