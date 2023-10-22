@@ -39,6 +39,15 @@
     (is (= (ina-read) 1.23))
     (is (= (length (invocations 'ina219-if:read-currency)) 1))))
 
+(test ina-retrieves-currency--double-float
+  (with-mocks ()
+    (answer ina219-if:init (values :ok))
+    (ina-init)
+
+    (answer ina219-if:read-currency (values :ok 9.319999694824219D0))
+    (is (= (ina-read) 9.32))
+    (is (= (length (invocations 'ina219-if:read-currency)) 1))))
+
 (test ina-retrieves-currency--err
   (with-mocks ()
     (answer ina219-if:init (values :ok))

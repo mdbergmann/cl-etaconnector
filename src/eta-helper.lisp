@@ -36,7 +36,7 @@
     (case stat
       (:ok
        (if (numberp currency)
-           currency
+           (coerce currency 'short-float)
            (error "Currency not a number: ~a" currency)))
       (otherwise
        (error "Read of ina not OK, value: ~a" currency)))))
