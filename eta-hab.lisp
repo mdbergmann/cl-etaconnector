@@ -39,8 +39,7 @@
            :pull (lambda () (eta-helper:ina-read))
            :push (lambda (value)
                    (log:debug "Pushing value: ~a" value)
-                   ;;(openhab:do-post "ZistSensorCurrency" value)
-                   )
+                   (openhab:do-post "ZistSensorCurrency" value))
            :call-push-p t)
   :persistence '(:id :default
                  :frequency :every-change
@@ -54,8 +53,7 @@
 (defitem 'sol-power-total-day "SolarPowerTotalDay" 'integer
   (binding :push (lambda (value)
                    (log:debug "Pushing value: ~a" value)
-                   ;;(openhab:do-post "SolarPowerTotalDay" value)
-                   )
+                   (openhab:do-post "SolarPowerTotalDay" value))
            :call-push-p t)
   :persistence '(:id :default
                  :frequency :every-change
@@ -68,8 +66,7 @@
            :pull (lambda () (eta-helper:solar-read))
            :push (lambda (value)
                    (log:debug "Pushing value: ~a" value)
-                   ;;(openhab:do-post "SolarPowerMom" value)
-                   )
+                   (openhab:do-post "SolarPowerMom" value))
            :call-push-p t)
   :persistence '(:id :default
                  :frequency :every-change
@@ -95,27 +92,25 @@
 ;; ---------------------
 
 (defparameter *eta-raw-items*
-  (list
-   ('eta-op-hours "HeatingETAOperatingHours" 'integer)
-   ('eta-ign-count "HeatingETAIgnitionCount" 'integer)
-   ('eta-temp-abgas "EtaAbgas" 'float)
-   ('eta-temp-aussen "EtaTempAussen" 'float)
-   ('eta-temp-boiler "EtaBoiler" 'float)
-   ('eta-temp-boiler-unten "EtaBoilerUnten" 'float)
-   ('eta-temp-boiler-untsolar "EtaBoilerUntSolar" 'float)
-   ('eta-temp-kessel "EtaKessel" 'float)
-   ('eta-temp-kessel-rueck "EtaKesselRuecklauf" 'float)
-   ('eta-temp-kollektor "EtaKollektor" 'float)
-   ('eta-temp-puffer-oben "EtaPufferOben" 'float)
-   ('eta-temp-puffer-unten "EtaPufferUnten" 'float)
-   ('eta-temp-vorlaufmk0 "EtaVorlaufMK0" 'float)))
+  '((eta-op-hours "HeatingETAOperatingHours" integer)
+    (eta-ign-count "HeatingETAIgnitionCount" integer)
+    (eta-temp-abgas "EtaAbgas" float)
+    (eta-temp-aussen "EtaTempAussen" float)
+    (eta-temp-boiler "EtaBoiler" float)
+    (eta-temp-boiler-unten "EtaBoilerUnten" float)
+    (eta-temp-boiler-untsolar "EtaBoilerUntSolar" float)
+    (eta-temp-kessel "EtaKessel" float)
+    (eta-temp-kessel-rueck "EtaKesselRuecklauf" float)
+    (eta-temp-kollektor "EtaKollektor" float)
+    (eta-temp-puffer-oben "EtaPufferOben" float)
+    (eta-temp-puffer-unten "EtaPufferUnten" float)
+    (eta-temp-vorlaufmk0 "EtaVorlaufMK0" float)))
 
 (dolist (i *eta-raw-items*)
   (defitem (first i) (second i) (third i)
     (binding :push (lambda (value)
                      (log:debug "Pushing value: ~a" value)
-                     ;;(openhab:do-post "HeatingETAOperatingHours" value)
-                     )
+                     (openhab:do-post (second i) value))
              :call-push-p t)
     :persistence '(:id :default
                    :frequency :every-change
@@ -129,11 +124,27 @@
   :do (lambda (trigger)
         (declare (ignore trigger))
         (eta-helper:ina-init)
-        (eta-helper:eta-init)))
+        (eta-helper:eta-init)
+        (sleep 2)
+        (eta-helper:eta-start-record)))
+
+(defun apply-monitors (monitors apply-fun)
+  "Applies the given MONITORS to the items by setting the monitor value."
+  (dolist (m monitors)
+    (let* ((monitor-name (car m))
+           (monitor-value (cdr m))
+           (item-id (find monitor-name *eta-raw-items* :key #'second :test #'equal))
+           (item (get-item (car item-id))))
+      (log:info "Monitor: ~a, value: ~a" monitor-name monitor-value)
+      (log:info "Item: ~a, value: ~a" item-id item)
+      (when item
+        (funcall apply-fun item monitor-value)))))
 
 (defrule "Read-ETA-serial"
-  :when-cron '() ; this is every minute, the lowest granularity.
+  :when-cron '()       ; this is every minute, the lowest granularity.
   :do (lambda (trigger)
         (declare (ignore trigger))
-        
-        ))
+        (let ((monitors (eta-helper:eta-read-monitors)))
+          (apply-monitors monitors
+                          (lambda (item value)
+                            (item:set-value item value))))))
