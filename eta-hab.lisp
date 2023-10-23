@@ -1,6 +1,6 @@
 (eval-when (:compile-toplevel :load-toplevel :execute)
   (ql:quickload :py4cl)
-  (load #P"src/ina219-if.lisp") ; Help on production to recompile ina219-if.lisp
+  (load #P"src/ina219-if.lisp") ; This helps with recompiling ina219
   (ql:quickload :cl-eta))
 
 (defpackage :eta-hab
