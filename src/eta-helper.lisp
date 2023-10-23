@@ -147,7 +147,7 @@ Returns monitor items, car item name, cdr item value. Or `nil' if failed."
           (eta-ser-if:read-serial *eta-serial-port*)))
     (log:debug "eta read result: ~a" read-data)
     (multiple-value-bind (complete data)
-        (eta-pkg:collect-data serial-data read-data)
+        (eta-pkg:collect-data +eta-new-empty-data+ read-data)
       (if complete
           (progn
             (log:debug "eta complete data: ~a" data)

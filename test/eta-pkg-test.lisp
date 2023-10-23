@@ -20,6 +20,8 @@
 (test collect-data--full-package
   (is (equalp '(t #(123 1 2 125)) (multiple-value-list (collect-data #(123 1) #(2 125))))))
 
+(test collect-data--double-full-package
+  (is (equalp '(t #(123 1 2 125)) (multiple-value-list (collect-data #() #(123 1 2 125 123 1 2 125))))))
 
 (test extract-pkg--fail-empty
   (is (equalp '(:fail "Undersized package!") (multiple-value-list (extract-pkg #())))))
@@ -92,5 +94,19 @@
                   3 ; checksum of payload
                   2 33 ; value two byte (545) / divisor 10
                   125))))))
+
+(test extract-pkg--production
+  (is (equalp (list :FAIL "Wrong payload size!")
+              (multiple-value-list
+               (extract-pkg
+                #(123 77 68 65 14 24 0 19 1 153 24 0 20 1 157 24 0
+                  21 0 0 24 0 22 0 78 24 0 23 1 69 24 0 53 85 85
+                  24 0 77 1 199 24 0 78 1 18 24 0 107 57 52 24 0
+                  112 1 76 24 0 167 0 0 32 0 75 1 185 32 0 145 1
+                  105 125 123 77 68 65 18 24 0 19 1 153 24 0 20 1
+                  157 24 0 21 0 0 24 0 22 0 79 24 0 23 1 73 24 0
+                  53 85 85 24 0 77 1 198 24 0 78 1 18 24 0 107 57
+                  52 24 0 112 1 76 24 0 167 0 0 32 0 75 1 185 32 0
+                  145 1 105 125))))))
 
 ;; todo: other package types
