@@ -21,6 +21,19 @@
                  )))
   :in-order-to ((test-op (test-op "cl-eta/tests"))))
 
+(defsystem "cl-eta/dryrun"
+  :author "Manfred Bergmann"
+  :depends-on ("cl-eta")
+  :components ((:module "dryrun"
+                :components
+                ((:file "eta-ser-if-dry")
+                 (:file "openhab-dry")
+                 (:file "solar-if-dry")
+                 (:file "ina219-if-dry")
+                 (:file "persistence-influx-dry")
+                 )))
+  :description "Dry run system for cl-eta")
+
 (defsystem "cl-eta/tests"
   :author "Manfred Bergmann"
   :depends-on ("cl-eta"

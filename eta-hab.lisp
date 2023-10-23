@@ -1,5 +1,5 @@
 (eval-when (:compile-toplevel :load-toplevel :execute)
-  (ql:quickload :cl-eta))
+  (ql:quickload :cl-eta/dryrun))
 
 (defpackage :eta-hab
   (:use :cl :cl-hab.hab)
@@ -20,7 +20,7 @@
 
 (defpersistence :default
     (lambda (id)
-      (make-simple-persistence id :storage-root-path "default-simple-persistence")))
+      (make-simple-persistence id :storage-root-path #P"~/eta-simple-persistence")))
 (defpersistence :influx
     (lambda (id)
       (make-influx-persistence
@@ -84,14 +84,14 @@
               (value)
             (multiple-value-bind (_total daily)
                 (eta-helper:calc-solar-total value)
-              (decare (ignore _total))
+              (declare (ignore _total))
               (item:set-value total-item daily))))))
 
 ;; ---------------------
 ;; Eta
 ;; ---------------------
 
-(defparameter *eta-raw-items*
+(defvar *eta-raw-items*
   '((eta-op-hours "HeatingETAOperatingHours" integer)
     (eta-ign-count "HeatingETAIgnitionCount" integer)
     (eta-temp-abgas "EtaAbgas" float)
@@ -120,7 +120,7 @@
 
 
 (defrule "Init externals"
-  :when-cron '(:bootonly t)
+  :when-cron '(:boot-only t)  ; beware all other cron keys are at :every
   :do (lambda (trigger)
         (declare (ignore trigger))
         (eta-helper:ina-init)
@@ -141,10 +141,15 @@
         (funcall apply-fun item monitor-value)))))
 
 (defrule "Read-ETA-serial"
-  :when-cron '()       ; this is every minute, the lowest granularity.
+  :when-cron '(:minute :every)
   :do (lambda (trigger)
         (declare (ignore trigger))
         (let ((monitors (eta-helper:eta-read-monitors)))
           (apply-monitors monitors
                           (lambda (item value)
                             (item:set-value item value))))))
+
+
+#|
+
+|#
