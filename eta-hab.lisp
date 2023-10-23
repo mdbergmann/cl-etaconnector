@@ -1,5 +1,7 @@
 (eval-when (:compile-toplevel :load-toplevel :execute)
-  (ql:quickload :cl-eta/dryrun))
+  (ql:quickload :py4cl)
+  (load #P"src/ina219-if.lisp") ; Help on production to recompile ina219-if.lisp
+  (ql:quickload :cl-eta))
 
 (defpackage :eta-hab
   (:use :cl :cl-hab.hab)
@@ -125,7 +127,6 @@
         (declare (ignore trigger))
         (eta-helper:ina-init)
         (eta-helper:eta-init)
-        (sleep 2)
         (eta-helper:eta-start-record)))
 
 (defun apply-monitors (monitors apply-fun)

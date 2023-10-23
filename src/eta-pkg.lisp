@@ -79,9 +79,7 @@ If this is a partial package the return is: `(values nil <partial-package>)'."
                              (= (char-code #\}) (elt data i)))
                     :do (return i)))
       (values
-       (if (and (> data-len 0) end-index (> end-index 0))
-           t
-           nil)
+       (and (> data-len 0) end-index (> end-index 0))
        (if end-index
            (subseq data 0 (1+ end-index))
            data)))))
