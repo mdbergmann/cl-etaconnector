@@ -53,6 +53,7 @@
 ;; Solar
 ;; ---------------------
 (defitem 'sol-power-total-day "SolarPowerTotalDay" 'integer
+  :initial-value 0
   (binding :push (lambda (value)
                    (log:debug "Pushing value: ~a" value)
                    (openhab:do-post "SolarPowerTotalDay" value))
@@ -150,6 +151,7 @@
                           (lambda (item value)
                             (item:set-value item value))))))
 
+;; todo: rule for calculating averages for ignition and operating hours
 
 #|
 

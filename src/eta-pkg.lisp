@@ -72,12 +72,11 @@ In this case the return is `(values t <full-package>)'.
 If this is a partial package the return is: `(values nil <partial-package>)'."
   (let* ((data (concatenate 'vector prev-data new-data))
          (data-len (length data)))
-    (let ((end-index 0))
-      (setf end-index
+    (let ((end-index
             (loop :for i :from 0 :to (1- data-len)
                   :when (and (= (char-code #\{) (elt data 0))
                              (= (char-code #\}) (elt data i)))
-                    :do (return i)))
+                    :do (return i))))
       (values
        (and (> data-len 0) end-index (> end-index 0))
        (if end-index
