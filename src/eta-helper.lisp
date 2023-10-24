@@ -64,8 +64,7 @@
 
 (defun solar-read ()
   (%read-solar-power (stat power total)
-                     (and (numberp power) (> power 0)
-                          (numberp total) (> total 0))
+                     (and (numberp power) (numberp total))
     (values (round power) (round total))))
 
 (defun calc-solar-total (old-total)
@@ -147,13 +146,14 @@ Returns monitor items, car item name, cdr item value. Or `nil' if failed."
           (eta-ser-if:read-serial *eta-serial-port*)))
     (log:debug "eta read result: ~a" read-data)
     (multiple-value-bind (complete data)
-        (eta-pkg:collect-data +eta-new-empty-data+ read-data)
+        (eta-pkg:collect-data serial-data read-data)
       (if complete
           (progn
             (log:debug "eta complete data: ~a" data)
             (%process-complete-pkg data))
           (progn
             (log:debug "eta incomplete data: ~a" data)
+            (sleep 1)
             (%eta-read-monitors data))))))
 
 (defun eta-read-monitors ()

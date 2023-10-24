@@ -81,6 +81,7 @@
   :when-cron '(:minute 50 :hour 23)
   :do (lambda (trigger)
         (declare (ignore trigger))
+        (log:info "Trigger calc daily solar total")
         (let ((total-item (get-item 'sol-power-total-day)))
           (future:fcompleted
               (item:get-value total-item)
