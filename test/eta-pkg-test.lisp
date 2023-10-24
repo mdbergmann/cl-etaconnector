@@ -23,6 +23,9 @@
 (test collect-data--double-full-package
   (is (equalp '(t #(123 1 2 125)) (multiple-value-list (collect-data #() #(123 1 2 125 123 1 2 125))))))
 
+(test collect-data--full-package-in-middle
+  (is (equalp '(t #(123 1 2 125)) (multiple-value-list (collect-data #(1 4 7 8) #(123 1 2 125 10 23))))))
+
 (test extract-pkg--fail-empty
   (is (equalp '(:fail "Undersized package!") (multiple-value-list (extract-pkg #())))))
 

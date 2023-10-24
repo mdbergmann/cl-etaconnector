@@ -72,16 +72,17 @@ In this case the return is `(values t <full-package>)'.
 If this is a partial package the return is: `(values nil <partial-package>)'."
   (let* ((data (concatenate 'vector prev-data new-data))
          (data-len (length data)))
-    (let ((end-index
-            (loop :for i :from 0 :to (1- data-len)
-                  :when (and (= (char-code #\{) (elt data 0))
-                             (= (char-code #\}) (elt data i)))
-                    :do (return i))))
-      (values
-       (and (> data-len 0) end-index (> end-index 0))
-       (if end-index
-           (subseq data 0 (1+ end-index))
-           data)))))
+    (flet ((find-charcode-index (charcode &optional (start-index 0))
+             (loop :for i :from start-index :to (1- data-len)
+                   :when (= charcode (elt data i))
+                     :do (return i))))
+      (let* ((start-index (find-charcode-index (char-code #\{)))
+             (end-index (and start-index (find-charcode-index (char-code #\}) start-index))))
+        (values
+         (and (> data-len 0) end-index (> end-index 0))
+         (if end-index
+             (subseq data start-index (1+ end-index))
+             data))))))
 
 (defun check-sum (seq)
   (mod (reduce #'+ seq) 256))
