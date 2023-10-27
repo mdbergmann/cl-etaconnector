@@ -52,6 +52,10 @@
 ;; ---------------------
 ;; Solar
 ;; ---------------------
+(defitem 'sol-power-total-last "SolarPowerTotalLast" 'integer
+  :persistence '(:id :default
+                 :frequency :every-change
+                 :load-on-start t))
 (defitem 'sol-power-total-day "SolarPowerTotalDay" 'integer
   :initial-value 0
   (binding :push (lambda (value)
@@ -77,20 +81,24 @@
   :persistence '(:id :influx
                  :frequency :every-change))
 
+(defun calc-daily-solar-total ()
+  (log:info "Trigger calc daily solar total")
+  (let ((total-day-item (get-item 'sol-power-total-day))
+        (total-last-item (get-item 'sol-power-total-last)))
+    (future:fcompleted
+        (item:get-value total-last-item)
+        (value)
+      (multiple-value-bind (total daily)
+          (eta-helper:calc-solar-total value)
+        (item:set-value total-day-item daily)
+        (item:set-value total-last-item total)))))
+
 (defrule "Calc-Daily-Solar-Total"
   :when-cron '(:minute 50 :hour 23)
   :do (lambda (trigger)
         (declare (ignore trigger))
-        (log:info "Trigger calc daily solar total")
-        (let ((total-item (get-item 'sol-power-total-day)))
-          (future:fcompleted
-              (item:get-value total-item)
-              (value)
-            (multiple-value-bind (_total daily)
-                (eta-helper:calc-solar-total value)
-              (declare (ignore _total))
-              (item:set-value total-item daily))))))
-
+        (calc-daily-solar-total)))
+        
 ;; ---------------------
 ;; Eta
 ;; ---------------------
