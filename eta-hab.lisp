@@ -37,7 +37,7 @@
 ;; ---------------------
 (defitem 'zist-sensor-curr "ZistSensorCurrency" 'float
   (binding :initial-delay 5
-           :delay 60
+           :delay (* 60 10)
            :pull (lambda () (eta-helper:ina-read))
            :push (lambda (value)
                    (log:debug "Pushing value: ~a" value)
