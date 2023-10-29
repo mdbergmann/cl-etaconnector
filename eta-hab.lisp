@@ -14,8 +14,8 @@
 (in-package :eta-hab)
 
 (log:config :warn :sane :this-console :daily "logs/app.log")
-(log:config '(cl-hab) :debug)
-(log:config '(cl-eta) :debug)
+(log:config '(cl-hab) :info)
+(log:config '(cl-eta) :info)
 
 ;; configure underlying actor system, timers, cron, etc.
 (defconfig)
