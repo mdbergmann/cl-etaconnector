@@ -130,6 +130,16 @@
     :persistence '(:id :influx
                    :frequency :every-change)))
 
+(defitem 'eta-op-hours-day-weekly "HeatingETAOpHoursPerDay" 'integer
+  (binding :push (lambda (value)
+		   (log:debug "Pushing (HeatingETAOpHoursPerDay) value: ~a" value)
+		   (openhab:do-post "HeatingETAOpHoursPerDay" value))
+	   :call-push-p t)
+  :persistence '(:id :default
+		 :frequency :every-change
+		 :load-on-start t)
+  :persistence '(:id :influx
+		 :frequency :every-change))
 
 (defrule "Init externals"
   :when-cron '(:boot-only t)  ; beware all other cron keys are at :every
@@ -159,6 +169,32 @@
           (apply-monitors monitors
                           (lambda (item value)
                             (item:set-value item value))))))
+
+(defun calc-daily-eta-op-hours-weekly ()
+  (log:info "Trigger calc daily eta op hours")
+  (let ((item (get-item 'eta-op-hours-day-weekly))
+        (eta-op-hours-item (get-item 'eta-op-hours))
+	(influx-persp (get-persistence :influx)))
+    (future:fcompleted
+        (item:get-value eta-op-hours-item)
+        (current-hours)
+      (future:fcompleted
+	  (persp:fetch influx-persp
+		       eta-op-hours-item
+		       (persp:make-relative-range :days 7))
+	  (values)
+	(let* ((last (persp:persisted-item-value (first values)))
+	       (diff (- current-hours last))
+	       (avg (round (/ diff 7))))
+	  (log:info "Current-hours: ~a, last week: ~a, diff: ~a, avg: ~a" current-hours last diff avg)
+	  (item:set-value item avg)
+	  )))))
+      
+(defrule "Calculate Daily OP hours - weekly"
+  :when-cron '(:minute 55 :hour 23 :day-of-week 6)
+  :do (lambda (trigger)
+	(declare (ignore trigger))
+	(calc-daily-eta-op-hours-weekly)))
 
 ;; todo: rule for calculating averages for ignition and operating hours
 
