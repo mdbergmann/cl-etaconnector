@@ -196,7 +196,109 @@
 	(declare (ignore trigger))
 	(calc-daily-eta-op-hours-weekly)))
 
-;; todo: rule for calculating averages for ignition and operating hours
+
+;; ---------------------
+;; Strom
+;; ---------------------
+
+(defun diff-days (former-ts later-ts)
+  (let* ((uni1 (local-time:timestamp-to-universal former-ts))
+	 (uni2 (local-time:timestamp-to-universal later-ts))
+	 (diff (- uni2 uni1)))
+    (round (/ diff (* 60 60 24)))))    
+
+(defun calc-elec-kmperday (input-item reader-item)
+  (let* ((input-state (item:get-item-stateq input-item))
+	 (input-value (item:item-state-value input-state))
+	 (input-timestamp (item:item-state-timestamp input-state))
+	 (reader-state (item:get-item-stateq reader-item))
+	 (reader-value (item:item-state-value reader-state))
+	 (reader-timestamp (item:item-state-timestamp reader-state)))
+    (let* ((diff-ts (- input-timestamp reader-timestamp))
+	   (diff-days (/ diff-ts (* 60 60 24))))
+      (values 
+       (/ (- input-value reader-value) diff-days)
+       input-value))))
+
+;; Master reader
+;; -------------
+
+(defitem 'elec-reader-state "ElecReaderState" 'float
+  (binding :push (lambda (value)
+		   (log:debug "Pushing (ElecReaderState) value: ~a" value)
+		   (openhab:do-post "ElecReaderState" value))
+	   :call-push-p t)
+  :persistence '(:id :default
+		 :frequency :every-change
+		 :load-on-start t)
+  :persistence '(:id :influx
+		 :frequency :every-change))
+
+(defitem 'elec-kw-per-day "ElecKWattsPerDay" 'float
+  (binding :push (lambda (value)
+		   (log:debug "Pushing (ElecKWattsPerDay) value: ~a" value)
+		   (openhab:do-post "ElecKWattsPerDay" value))
+	   :call-push-p t)
+  :persistence '(:id :default
+		 :frequency :every-change
+		 :load-on-start t)
+  :persistence '(:id :influx
+		 :frequency :every-change))
+
+(defitem 'elec-reader-state-input "ElecReaderStateInput" 'float
+  :initial-value 0)
+    
+(defrule "Calculate elec kw/day from new input"
+  :when-item-change 'elec-reader-state-input
+  :do (lambda (trigger)
+	(declare (ignore trigger))
+	(let ((reader-item (get-item 'elec-reader-state)))
+	  (multiple-value-bind (new-km-per-day input-value)
+	      (calc-elec-kmperday
+	       (get-item 'elec-reader-state-input)
+	       reader-item)
+	    (item:set-value (get-item 'elec-kw-per-day) new-km-per-day)
+	    (item:set-value reader-item input-value)))))
+
+;; Garden reader
+;; -------------
+
+(defitem 'elec-garden-reader-state "ElecGarReaderState" 'float
+  (binding :push (lambda (value)
+		   (log:debug "Pushing (ElecGarReaderState) value: ~a" value)
+		   (openhab:do-post "ElecGarReaderState" value))
+	   :call-push-p t)
+  :persistence '(:id :default
+		 :frequency :every-change
+		 :load-on-start t)
+  :persistence '(:id :influx
+		 :frequency :every-change))
+
+(defitem 'elec-garden-kw-per-day "ElecGarKWattsPerDay" 'float
+  (binding :push (lambda (value)
+		   (log:debug "Pushing (ElecGarKWattsPerDay) value: ~a" value)
+		   (openhab:do-post "ElecGarKWattsPerDay" value))
+	   :call-push-p t)
+  :persistence '(:id :default
+		 :frequency :every-change
+		 :load-on-start t)
+  :persistence '(:id :influx
+		 :frequency :every-change))
+
+(defitem 'elec-garden-reader-state-input "ElecGarReaderStateInput" 'float
+  :initial-value 0)
+    
+(defrule "Calculate elec kw/day (garden) from new input"
+  :when-item-change 'elec-garden-reader-state-input
+  :do (lambda (trigger)
+	(declare (ignore trigger))
+	(let ((reader-item (get-item 'elec-garden-reader-state)))
+	  (multiple-value-bind (new-km-per-day input-value)
+	      (calc-elec-kmperday
+	       (get-item 'elec-garden-reader-state-input)
+	       reader-item)
+	    (item:set-value (get-item 'elec-garden-kw-per-day) new-km-per-day)
+	    (item:set-value reader-item input-value)))))
 
 #|
 
