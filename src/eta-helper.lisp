@@ -68,7 +68,7 @@
     (values (round power) (round total))))
 
 (defun calc-solar-total (old-total)
-  (multiple-value-bind (_power total)
+  (multiple-vgalue-bind (_power total)
       (solar-read)
     (declare (ignore _power))
     (let ((new-daily (- total old-total)))

@@ -29,7 +29,7 @@
 (defvar +monitor-size+ 5)
 
 (defparameter +start-record-pkg-payload+
-  '(120                                 ; 2 minutes refresh time
+  '(60                                  ; 1 minute refresh time
     #x18 0 19                           ; Abgass
     #x18 0 22                           ; Aussen
     #x18 0 53                           ; Betriebsstunden

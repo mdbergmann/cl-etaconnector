@@ -163,7 +163,7 @@
         (funcall apply-fun item monitor-value)))))
 
 (defrule "Read-ETA-serial"
-  :when-cron '(:minute :every :set-min 2)
+  :when-cron '(:minute :every)
   :do (lambda (trigger)
         (declare (ignore trigger))
         (let ((monitors (eta-helper:eta-read-monitors)))
