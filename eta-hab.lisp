@@ -13,9 +13,10 @@
                 #:make-influx-persistence))
 (in-package :eta-hab)
 
-(log:config :warn :sane :this-console :daily "logs/app.log")
-(log:config '(cl-hab) :info)
+(log:config :warn)
+(log:config '(cl-hab) :warn)
 (log:config '(cl-eta) :info)
+(log:config :sane :this-console :daily "logs/app.log")
 
 ;; configure underlying actor system, timers, cron, etc.
 (defconfig)
@@ -162,7 +163,7 @@
         (funcall apply-fun item monitor-value)))))
 
 (defrule "Read-ETA-serial"
-  :when-cron '(:minute :every)
+  :when-cron '(:minute :every :set-min 2)
   :do (lambda (trigger)
         (declare (ignore trigger))
         (let ((monitors (eta-helper:eta-read-monitors)))

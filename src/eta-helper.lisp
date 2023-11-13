@@ -134,7 +134,7 @@ Returns monitor items, car item name, cdr item value. Or `nil' if failed."
                (log:warn "Failed package extraction: ~a" pkg-data)
                nil))
       (:eta-monitor (progn
-                      (log:info "Monitor data: ~a" pkg-data)
+                      (log:debug "Monitor data: ~a" pkg-data)
                       items))
       (otherwise (progn
                    (log:info "Unknown extract pkg result!")
@@ -159,7 +159,7 @@ Returns monitor items, car item name, cdr item value. Or `nil' if failed."
 (defun eta-read-monitors ()
   "Reads monitor data from serial port.
 Returns monitor items, car item name, cdr item value. Or `nil' if failed."
-  (log:info "eta read monitors...")
+  (log:debug "eta read monitors...")
   (prog1
       (%eta-read-monitors +eta-new-empty-data+)
     (log:info "eta read monitors...done")))
