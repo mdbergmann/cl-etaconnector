@@ -26,6 +26,9 @@
 (test collect-data--full-package-in-middle
   (is (equalp '(t #(123 1 2 125)) (multiple-value-list (collect-data #(1 4 7 8) #(123 1 2 125 10 23))))))
 
+(test collect-data--full-package-multiple-starts
+  (is (equalp '(t #(123 1 2 125)) (multiple-value-list (collect-data #() #(123 2 3 123 1 2 125))))))
+
 (test extract-pkg--fail-empty
   (is (equalp '(:fail "Undersized package!") (multiple-value-list (extract-pkg #())))))
 
@@ -111,5 +114,14 @@
                   53 85 85 24 0 77 1 198 24 0 78 1 18 24 0 107 57
                   52 24 0 112 1 76 24 0 167 0 0 32 0 75 1 185 32 0
                   145 1 105 125))))))
+
+(test extract-pkg--production2
+  (is (equalp (list :FAIL "Wrong payload size!")
+              (multiple-value-list
+               (extract-pkg
+                #(123 77 68 65 15 24 0 19 5 139 24 0 20 2 224 24
+                  57 111 24 0 112 2 89 24 0 167 0 0 32 0 75 0 175
+                  32 0 145 1 70 125))))))
+
 
 ;; todo: other package types

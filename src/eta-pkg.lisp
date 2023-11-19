@@ -67,17 +67,17 @@
 
 (defun collect-data (prev-data new-data)
   "Concatenates `prev-data' and `new-data'.
-A full package is when it starts with `#\{' and ends with `#\}'.
+A full package is when it contains starting `#\{' and ending `#\}'.
 In this case the return is `(values t <full-package>)'.
 If this is a partial package the return is: `(values nil <partial-package>)'."
   (let* ((data (concatenate 'vector prev-data new-data))
          (data-len (length data)))
-    (flet ((find-charcode-index (charcode &optional (start-index 0))
-             (loop :for i :from start-index :to (1- data-len)
+    (flet ((find-charcode-index (charcode &optional (start-index (1- data-len)))
+             (loop :for i :from start-index :downto 0
                    :when (= charcode (elt data i))
                      :do (return i))))
-      (let* ((start-index (find-charcode-index (char-code #\{)))
-             (end-index (and start-index (find-charcode-index (char-code #\}) start-index))))
+      (let* ((end-index (find-charcode-index (char-code #\})))
+             (start-index (and end-index (find-charcode-index (char-code #\{) end-index))))
         (values
          (and (> data-len 0) end-index (> end-index 0))
          (if end-index
