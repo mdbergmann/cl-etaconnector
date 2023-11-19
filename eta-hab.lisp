@@ -129,7 +129,7 @@
                    :frequency :every-change
                    :load-on-start t)
     :persistence '(:id :influx
-                   :frequency :every-change)))
+                   :frequency :every-5m)))
 
 (defitem 'eta-op-hours-day-weekly "HeatingETAOpHoursPerDay" 'integer
   (binding :push (lambda (value)
