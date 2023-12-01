@@ -87,11 +87,12 @@
   (log:info "Trigger calc daily solar total")
   (let ((total-day-item (get-item 'sol-power-total-day))
         (total-last-item (get-item 'sol-power-total-last)))
-    (future:fcompleted
-        (item:get-value total-last-item)
-        (value)
+    (let* ((total-last-state (item:get-item-stateq total-last-item))
+	   (total-value (item:item-state-value total-last-state))
+	   (total-timestamp (item:item-state-timestamp total-last-state)))
+      (format t "have value: ~a, timestamp: ~a~%" total-value total-timestamp)
       (multiple-value-bind (total daily)
-          (eta-helper:calc-solar-total value)
+          (eta-helper:calc-solar-total total-value total-timestamp)
         (item:set-value total-day-item daily)
         (item:set-value total-last-item total)))))
 
