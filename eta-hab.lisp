@@ -54,6 +54,7 @@
 ;; Solar
 ;; ---------------------
 (defitem 'sol-power-total-last "SolarPowerTotalLast" 'integer
+  ;; this item is just a storage for the last transmitted value
   :persistence '(:id :default
                  :frequency :every-change
                  :load-on-start t))
