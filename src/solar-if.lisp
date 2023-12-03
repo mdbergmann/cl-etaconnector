@@ -8,6 +8,11 @@
 (defparameter *solar-url* "http://192.168.50.21/rpc")
 
 (defun read-power ()
+  "Returns three values:
+1. `:ok' on success (where also 2. and 3. are provided), 
+   `:nok' on failure (additionally provided is the HTTP status code).
+2. 'apower' current power in Watts.
+3. 'total' in W/h"
   (multiple-value-bind (body stat)
       (drakma:http-request
        *solar-url* 

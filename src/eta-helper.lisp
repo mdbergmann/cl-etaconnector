@@ -52,7 +52,7 @@
          (solar-if:read-power)
        (setf ,power (abs ,power)
              ,total (abs ,total))
-       (log:info "Reading solar...done, value: ~a, total: ~a" ,power ,total)
+       (log:info "Reading solar...done, value: ~a W, total: ~a W/h" ,power ,total)
        (case ,stat
          (:ok
           (if ,pred
@@ -74,8 +74,8 @@
     (let* ((time-diff (- (get-universal-time) old-timestamp))
 	   (days-diff (float (/ time-diff (* 60 60 24))))
 	   (new-daily (round (/ (- total old-total) days-diff))))
-      (log:info "Solar total: ~a" total)
-      (log:info "Solar daily: ~a" new-daily)
+      (log:info "Solar total: ~a W/h" total)
+      (log:info "Solar daily: ~a W/h" new-daily)
       (values total new-daily))))
 
 ;; ----------------------------------------

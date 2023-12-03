@@ -16,6 +16,7 @@
 (log:config :warn)
 (log:config '(cl-hab) :warn)
 (log:config '(cl-eta) :info)
+(log:config '(eta-hab) :info)
 (log:config :sane :this-console :daily "logs/app.log")
 
 ;; configure underlying actor system, timers, cron, etc.
@@ -55,10 +56,12 @@
 ;; ---------------------
 (defitem 'sol-power-total-last "SolarPowerTotalLast" 'integer
   ;; this item is just a storage for the last transmitted value
+  ;; in W/h
   :persistence '(:id :default
                  :frequency :every-change
                  :load-on-start t))
 (defitem 'sol-power-total-day "SolarPowerTotalDay" 'integer
+  ;; in W/h
   :initial-value 0
   (binding :push (lambda (value)
                    (log:debug "Pushing value: ~a" value)
@@ -84,19 +87,20 @@
                  :frequency :every-change))
 
 (defun calc-daily-solar-total ()
-  (log:info "Trigger calc daily solar total")
+  (log:info "Calculating daily total solar...")
   (let ((total-day-item (get-item 'sol-power-total-day))
         (total-last-item (get-item 'sol-power-total-last)))
     (let* ((total-last-state (item:get-item-stateq total-last-item))
 	   (total-value (item:item-state-value total-last-state))
 	   (total-timestamp (item:item-state-timestamp total-last-state)))
-      (format t "have value: ~a, timestamp: ~a~%" total-value total-timestamp)
+      (log:info "Have last total value: ~a W/h at timestamp: ~a" total-value total-timestamp)
       (multiple-value-bind (total daily)
           (eta-helper:calc-solar-total total-value total-timestamp)
+	(log:info "New daily solar: ~a W/h" daily)
         (item:set-value total-day-item daily)
         (item:set-value total-last-item total)))))
 
-(defrule "Calc-Daily-Solar-Total"
+(defrule "Calc-Daily-Solar-Total" ; in kW
   :when-cron '(:minute 50 :hour 23)
   :do (lambda (trigger)
         (declare (ignore trigger))
@@ -159,8 +163,8 @@
            (monitor-value (cdr m))
            (item-id (find monitor-name *eta-raw-items* :key #'second :test #'equal))
            (item (get-item (car item-id))))
-      (log:info "Monitor: ~a, value: ~a" monitor-name monitor-value)
-      (log:info "Item: ~a, value: ~a" item-id item)
+      (log:debug "Monitor: ~a, value: ~a" monitor-name monitor-value)
+      (log:debug "Item: ~a, value: ~a" item-id item)
       (when item
         (funcall apply-fun item monitor-value)))))
 
