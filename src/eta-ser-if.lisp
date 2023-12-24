@@ -22,10 +22,14 @@
 (defun write-serial (port data)
   (cserial-port:write-serial-byte-vector data port))
 
-(defun read-serial (port &optional (timeout 2000))
+(defun read-serial (port &optional (timeout nil))
   (let ((buf (make-array 1024 :element-type '(unsigned-byte 8))))
     (handler-case
-        (let ((nread (cserial-port:read-serial-byte-vector buf port :timeout-ms timeout)))
+        (let ((nread (cserial-port:read-serial-byte-vector
+		      buf port
+		      :timeout-ms
+		      (or timeout
+			  cserial-port::*default-timeout-ms*))))
           (case nread
             ('() #())
             (otherwise (subseq buf 0 nread))))
