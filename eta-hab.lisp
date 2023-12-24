@@ -324,7 +324,6 @@
        (/ (- input-value reader-value) diff-days)
        input-value))))
 
-;; WIP
 (defmacro gen-water-qm-rule ((reader-item
 			      reader-in-item
 			      qm-item
@@ -350,35 +349,52 @@
 		    ,reader-item-instance)
 		 (item:set-value ,qm-item-instance ,new-qm-per-day)
 		 (item:set-value ,reader-item-instance ,input-value)))))))
-  
+
+(defmacro gen-water-item-tripple (reader-pair
+				  reader-in-pair
+				  qm-pair)
+  (let ((item-name (gensym))
+	(item-label (gensym))
+	(value-1 (gensym))
+	(value-2 (gensym)))
+    `(progn
+       (destructuring-bind (,item-name . ,item-label)
+	   ,reader-pair
+	 (defitem ,item-name ,item-label 'float
+	   (binding :push (lambda (,value-1)
+			    (log:debug "Pushing (~a) value: ~a" ,item-label ,value-1)
+			    (openhab:do-post ,item-label ,value-1))
+		    :call-push-p t)
+	   :persistence '(:id :default
+			  :frequency :every-change
+			  :load-on-start t)
+	   :persistence '(:id influx
+			  :frequence :every-change)))
+       (destructuring-bind (,item-name . ,item-label)
+	   ,reader-in-pair
+	 (defitem ,item-name ,item-label 'float
+	   :initial-value 0))
+       (destructuring-bind (,item-name . ,item-label)
+	   ,qm-pair
+	 (defitem ,item-name ,item-label 'float
+	   (binding :push (lambda (,value-2)
+			    (log:debug "Pushing (~a) value: ~a" ,item-label ,value-2)
+			    (openhab:do-post ,item-label ,value-2))
+		    :call-push-p t)
+	   :persistence '(:id :default
+			  :frequency :every-change
+			  :load-on-start t)
+	   :persistence '(:id :influx
+			  :frequency :every-change))
+	 ))))
+
 
 ;; Main reader
 ;; -----------
 
-(defitem 'water-reader-state "WaterReaderState" 'float
-  (binding :push (lambda (value)
-		   (log:debug "Pushing (WaterReaderState) value: ~a" value)
-		   (openhab:do-post "WaterReaderState" value))
-	   :call-push-p t)
-  :persistence '(:id :default
-		 :frequency :every-change
-		 :load-on-start t)
-  :persistence '(:id influx
-		 :frequence :every-change))
-
-(defitem 'water-qm-per-day "WaterQMPerDay" 'float
-  (binding :push (lambda (value)
-		   (log:debug "Pushing (WaterQMPerDay) value: ~a" value)
-		   (openhab:do-post "WaterQMPerDay" value))
-	   :call-push-p t)
-  :persistence '(:id :default
-		 :frequency :every-change
-		 :load-on-start t)
-  :persistence '(:id :influx
-		 :frequency :every-change))
-
-(defitem 'water-reader-state-input "WaterReaderStateInput" 'float
-  :initial-value 0)
+(gen-water-item-tripple '(water-reader-state . "WaterReaderState")
+			'(water-reader-state-input . "WaterReaderStateInput")
+			'(water-qm-per-day . "WaterQMPerDay"))
 
 (gen-water-qm-rule ('water-reader-state
 		    'water-reader-state-input
@@ -388,30 +404,9 @@
 ;; Garden reader
 ;; -----------
 
-(defitem 'water-garden-reader-state "GardenWaterReaderState" 'float
-  (binding :push (lambda (value)
-		   (log:debug "Pushing (GardenWaterReaderState) value: ~a" value)
-		   (openhab:do-post "GardenWaterReaderState" value))
-	   :call-push-p t)
-  :persistence '(:id :default
-		 :frequency :every-change
-		 :load-on-start t)
-  :persistence '(:id influx
-		 :frequence :every-change))
-
-(defitem 'water-garden-qm-per-day "GardenWaterQMPerDay" 'float
-  (binding :push (lambda (value)
-		   (log:debug "Pushing (GardenWaterQMPerDay) value: ~a" value)
-		   (openhab:do-post "GardenWaterQMPerDay" value))
-	   :call-push-p t)
-  :persistence '(:id :default
-		 :frequency :every-change
-		 :load-on-start t)
-  :persistence '(:id :influx
-		 :frequency :every-change))
-
-(defitem 'water-garden-reader-state-input "GardenWaterReaderStateInput" 'float
-  :initial-value 0)
+(gen-water-item-tripple '(water-garden-reader-state . "GardenWaterReaderState")
+			'(water-garden-reader-state-input . "GardenWaterReaderStateInput")
+			'(water-garden-qm-per-day . "GardenGardenQMPerDay"))
 
 (gen-water-qm-rule ('water-garden-reader-state
 		    'water-garden-reader-state-input
@@ -421,30 +416,9 @@
 ;; Fresh-in reader
 ;; -----------
 
-(defitem 'water-fresh-reader-state "FreshInWaterReaderState" 'float
-  (binding :push (lambda (value)
-		   (log:debug "Pushing (FreshInWaterReaderState) value: ~a" value)
-		   (openhab:do-post "FreshInWaterReaderState" value))
-	   :call-push-p t)
-  :persistence '(:id :default
-		 :frequency :every-change
-		 :load-on-start t)
-  :persistence '(:id influx
-		 :frequence :every-change))
-
-(defitem 'water-fresh-qm-per-day "FreshInWaterQMPerDay" 'float
-  (binding :push (lambda (value)
-		   (log:debug "Pushing (FreshInWaterQMPerDay) value: ~a" value)
-		   (openhab:do-post "FreshInWaterQMPerDay" value))
-	   :call-push-p t)
-  :persistence '(:id :default
-		 :frequency :every-change
-		 :load-on-start t)
-  :persistence '(:id :influx
-		 :frequency :every-change))
-
-(defitem 'water-fresh-reader-state-input "FreshInWaterReaderStateInput" 'float
-  :initial-value 0)
+(gen-water-item-tripple '(water-fresh-reader-state . "FreshInWaterReaderState")
+			'(water-fresh-reader-state-input . "FreshInWaterReaderStateInput")
+			'(water-fresh-qm-per-day . "FreshInWaterQMPerDay"))
 
 (gen-water-qm-rule ('water-fresh-reader-state
 		    'water-fresh-reader-state-input
@@ -454,30 +428,9 @@
 ;; zist-in reader
 ;; --------------
 
-(defitem 'water-zist-reader-state "ZistInWaterReaderState" 'float
-  (binding :push (lambda (value)
-		   (log:debug "Pushing (ZistInWaterReaderState) value: ~a" value)
-		   (openhab:do-post "ZistInWaterReaderState" value))
-	   :call-push-p t)
-  :persistence '(:id :default
-		 :frequency :every-change
-		 :load-on-start t)
-  :persistence '(:id influx
-		 :frequence :every-change))
-
-(defitem 'water-zist-qm-per-day "ZistInWaterQMPerDay" 'float
-  (binding :push (lambda (value)
-		   (log:debug "Pushing (ZistInWaterQMPerDay) value: ~a" value)
-		   (openhab:do-post "ZistInWaterQMPerDay" value))
-	   :call-push-p t)
-  :persistence '(:id :default
-		 :frequency :every-change
-		 :load-on-start t)
-  :persistence '(:id :influx
-		 :frequency :every-change))
-
-(defitem 'water-zist-reader-state-input "ZistInWaterReaderStateInput" 'float
-  :initial-value 0)
+(gen-water-item-tripple '(water-zist-reader-state . "ZistInWaterReaderState")
+			'(water-zist-reader-state-input . "ZistInWaterReaderStateInput")
+			'(water-zist-qm-per-day . "ZistInWaterQMPerDay"))
 
 (gen-water-qm-rule ('water-zist-reader-state
 		    'water-zist-reader-state-input
