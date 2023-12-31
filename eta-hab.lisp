@@ -437,6 +437,63 @@
 		    'water-zist-qm-per-day
 		    "zist"))
 
+;; ---------------------
+;; Chips
+;; ---------------------
+
+(defun calc-chips-qm3perday (input-item reader-item)
+  (let* ((input-state (item:get-item-stateq input-item))
+	 (input-value (item:item-state-value input-state))
+	 (input-timestamp (item:item-state-timestamp input-state))
+	 (reader-state (item:get-item-stateq reader-item))
+	 (reader-timestamp (item:item-state-timestamp reader-state)))
+    (let* ((diff-ts (- input-timestamp reader-timestamp))
+	   (diff-days (/ diff-ts (* 60 60 24))))
+      (values 
+       (/ input-value diff-days)
+       input-value))))
+
+(defitem 'chips-reload-volume "ChipsReloadVolume" 'float
+  ;; in qm3
+  :initial-value 0.0
+  (binding :push (lambda (value)
+                   (log:debug "Pushing value: ~a" value)
+                   (openhab:do-post "ChipsReloadVolume" value))
+           :call-push-p t)
+  :persistence '(:id :default
+                 :frequency :every-change
+                 :load-on-start t)
+  :persistence '(:id :influx
+                 :frequency :every-change))
+
+(defitem 'chips-qm3-per-day "ChipsPerDay" 'float
+  (binding :push (lambda (value)
+                   (log:debug "Pushing value: ~a" value)
+                   (openhab:do-post "ChipsPerDay" value))
+           :call-push-p t)
+  :persistence '(:id :default
+                 :frequency :every-change
+                 :load-on-start t)
+  :persistence '(:id :influx
+                 :frequency :every-change))
+
+(defitem 'chips-reload-volume-input "ChipsReloadVolumeInput" 'float
+  :initial-value 0.0)
+
+(defrule "ChipsReloadPerDayRule"
+  :when-item-change 'chips-reload-volume-input
+  :do (lambda (trigger)
+	(declare (ignore trigger))
+	(log:info "Calculate new chips qm3/day...")
+	(let ((chips-item-instance (get-item 'chips-reload-volume))
+	      (input-item-instance (get-item 'chips-reload-volume-input))
+	      (qm3-item-instance (get-item 'chips-qm3-per-day)))
+	  (multiple-value-bind (new-qm3-per-day input-value)
+	      (calc-chips-qm3perday
+	       input-item-instance
+	       chips-item-instance)
+	    (item:set-value qm3-item-instance new-qm3-per-day)
+	    (item:set-value chips-item-instance input-value)))))
 
 #|
 
