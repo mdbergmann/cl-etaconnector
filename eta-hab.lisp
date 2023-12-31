@@ -34,6 +34,44 @@
        :org "mabe"
        :bucket "hab")))
 
+(defmacro gen-reader-item-tripple (reader-pair
+				   reader-in-pair
+				   qm-pair)
+  (let ((item-name (gensym))
+	(item-label (gensym))
+	(value-1 (gensym))
+	(value-2 (gensym)))
+    `(progn
+       (destructuring-bind (,item-name . ,item-label)
+	   ,reader-pair
+	 (defitem ,item-name ,item-label 'float
+	   (binding :push (lambda (,value-1)
+			    (log:debug "Pushing (~a) value: ~a" ,item-label ,value-1)
+			    (openhab:do-post ,item-label ,value-1))
+		    :call-push-p t)
+	   :persistence '(:id :default
+			  :frequency :every-change
+			  :load-on-start t)
+	   :persistence '(:id influx
+			  :frequence :every-change)))
+       (destructuring-bind (,item-name . ,item-label)
+	   ,reader-in-pair
+	 (defitem ,item-name ,item-label 'float
+	   :initial-value 0))
+       (destructuring-bind (,item-name . ,item-label)
+	   ,qm-pair
+	 (defitem ,item-name ,item-label 'float
+	   (binding :push (lambda (,value-2)
+			    (log:debug "Pushing (~a) value: ~a" ,item-label ,value-2)
+			    (openhab:do-post ,item-label ,value-2))
+		    :call-push-p t)
+	   :persistence '(:id :default
+			  :frequency :every-change
+			  :load-on-start t)
+	   :persistence '(:id :influx
+			  :frequency :every-change))
+	 ))))
+
 ;; ---------------------
 ;; Zisterne
 ;; ---------------------
@@ -350,49 +388,10 @@
 		 (item:set-value ,qm-item-instance ,new-qm-per-day)
 		 (item:set-value ,reader-item-instance ,input-value)))))))
 
-(defmacro gen-water-item-tripple (reader-pair
-				  reader-in-pair
-				  qm-pair)
-  (let ((item-name (gensym))
-	(item-label (gensym))
-	(value-1 (gensym))
-	(value-2 (gensym)))
-    `(progn
-       (destructuring-bind (,item-name . ,item-label)
-	   ,reader-pair
-	 (defitem ,item-name ,item-label 'float
-	   (binding :push (lambda (,value-1)
-			    (log:debug "Pushing (~a) value: ~a" ,item-label ,value-1)
-			    (openhab:do-post ,item-label ,value-1))
-		    :call-push-p t)
-	   :persistence '(:id :default
-			  :frequency :every-change
-			  :load-on-start t)
-	   :persistence '(:id influx
-			  :frequence :every-change)))
-       (destructuring-bind (,item-name . ,item-label)
-	   ,reader-in-pair
-	 (defitem ,item-name ,item-label 'float
-	   :initial-value 0))
-       (destructuring-bind (,item-name . ,item-label)
-	   ,qm-pair
-	 (defitem ,item-name ,item-label 'float
-	   (binding :push (lambda (,value-2)
-			    (log:debug "Pushing (~a) value: ~a" ,item-label ,value-2)
-			    (openhab:do-post ,item-label ,value-2))
-		    :call-push-p t)
-	   :persistence '(:id :default
-			  :frequency :every-change
-			  :load-on-start t)
-	   :persistence '(:id :influx
-			  :frequency :every-change))
-	 ))))
-
-
 ;; Main reader
 ;; -----------
 
-(gen-water-item-tripple '(water-reader-state . "WaterReaderState")
+(gen-reader-item-tripple '(water-reader-state . "WaterReaderState")
 			'(water-reader-state-input . "WaterReaderStateInput")
 			'(water-qm-per-day . "WaterQMPerDay"))
 
@@ -402,9 +401,9 @@
 		    "master"))
 
 ;; Garden reader
-;; -----------
+;; -------------
 
-(gen-water-item-tripple '(water-garden-reader-state . "GardenWaterReaderState")
+(gen-reader-item-tripple '(water-garden-reader-state . "GardenWaterReaderState")
 			'(water-garden-reader-state-input . "GardenWaterReaderStateInput")
 			'(water-garden-qm-per-day . "GardenGardenQMPerDay"))
 
@@ -416,7 +415,7 @@
 ;; Fresh-in reader
 ;; -----------
 
-(gen-water-item-tripple '(water-fresh-reader-state . "FreshInWaterReaderState")
+(gen-reader-item-tripple '(water-fresh-reader-state . "FreshInWaterReaderState")
 			'(water-fresh-reader-state-input . "FreshInWaterReaderStateInput")
 			'(water-fresh-qm-per-day . "FreshInWaterQMPerDay"))
 
@@ -428,7 +427,7 @@
 ;; zist-in reader
 ;; --------------
 
-(gen-water-item-tripple '(water-zist-reader-state . "ZistInWaterReaderState")
+(gen-reader-item-tripple '(water-zist-reader-state . "ZistInWaterReaderState")
 			'(water-zist-reader-state-input . "ZistInWaterReaderStateInput")
 			'(water-zist-qm-per-day . "ZistInWaterQMPerDay"))
 
@@ -453,32 +452,9 @@
        (/ input-value diff-days)
        input-value))))
 
-(defitem 'chips-reload-volume "ChipsReloadVolume" 'float
-  ;; in qm3
-  :initial-value 0.0
-  (binding :push (lambda (value)
-                   (log:debug "Pushing value: ~a" value)
-                   (openhab:do-post "ChipsReloadVolume" value))
-           :call-push-p t)
-  :persistence '(:id :default
-                 :frequency :every-change
-                 :load-on-start t)
-  :persistence '(:id :influx
-                 :frequency :every-change))
-
-(defitem 'chips-qm3-per-day "ChipsPerDay" 'float
-  (binding :push (lambda (value)
-                   (log:debug "Pushing value: ~a" value)
-                   (openhab:do-post "ChipsPerDay" value))
-           :call-push-p t)
-  :persistence '(:id :default
-                 :frequency :every-change
-                 :load-on-start t)
-  :persistence '(:id :influx
-                 :frequency :every-change))
-
-(defitem 'chips-reload-volume-input "ChipsReloadVolumeInput" 'float
-  :initial-value 0.0)
+(gen-reader-item-tripple '(chips-reload-volume . "ChipsReloadVolume")
+			 '(chips-reload-volume-input . "ChipsReloadVolumeInput")
+			 '(chips-qm3-per-day . "ChipsPerDay"))
 
 (defrule "ChipsReloadPerDayRule"
   :when-item-change 'chips-reload-volume-input
