@@ -46,8 +46,9 @@
 	   ,reader-pair
 	 (defitem ,item-name ,item-label 'float
 	   (binding :push (lambda (,value-1)
-			    (log:debug "Pushing (~a) value: ~a" ,item-label ,value-1)
-			    (openhab:do-post ,item-label ,value-1))
+			    (when ,item-label
+			      (log:debug "Pushing (~a) value: ~a" ,item-label ,value-1)
+			      (openhab:do-post ,item-label ,value-1)))
 		    :call-push-p t)
 	   :persistence '(:id :default
 			  :frequency :every-change
@@ -402,6 +403,7 @@
 
 ;; Garden reader
 ;; -------------
+;; 2181104597
 
 (gen-reader-item-tripple '(water-garden-reader-state . "GardenWaterReaderState")
 			'(water-garden-reader-state-input . "GardenWaterReaderStateInput")
@@ -414,6 +416,7 @@
 
 ;; Fresh-in reader
 ;; -----------
+;; 21189395
 
 (gen-reader-item-tripple '(water-fresh-reader-state . "FreshInWaterReaderState")
 			'(water-fresh-reader-state-input . "FreshInWaterReaderStateInput")
@@ -435,6 +438,18 @@
 		    'water-zist-reader-state-input
 		    'water-zist-qm-per-day
 		    "zist"))
+
+;; Garden-Gunda
+;; 2300102414
+
+(gen-reader-item-tripple '(water-alt-garden-reader-state . nil)
+			'(water-alt-garden-reader-state-input . nil)
+			'(water-alt-garden-qm-per-day . nil))
+
+(gen-water-qm-rule ('water-alt-garden-reader-state
+		    'water-alt-garden-reader-state-input
+		    'water-alt-garden-qm-per-day
+		    "alt-garden"))
 
 ;; ---------------------
 ;; Chips
