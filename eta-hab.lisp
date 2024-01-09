@@ -269,31 +269,10 @@
 ;; Master reader
 ;; -------------
 
-(defitem 'elec-reader-state "ElecReaderState" 'float
-  (binding :push (lambda (value)
-		   (log:debug "Pushing (ElecReaderState) value: ~a" value)
-		   (openhab:do-post "ElecReaderState" value))
-	   :call-push-p t)
-  :persistence '(:id :default
-		 :frequency :every-change
-		 :load-on-start t)
-  :persistence '(:id :influx
-		 :frequency :every-change))
+(gen-reader-item-tripple '(elec-reader-state . "ElecReaderState")
+			 '(elec-reader-state-input . "ElecReaderStateInput")
+			 '(elec-kw-per-day . "ElecKWattsPerDay"))
 
-(defitem 'elec-kw-per-day "ElecKWattsPerDay" 'float
-  (binding :push (lambda (value)
-		   (log:debug "Pushing (ElecKWattsPerDay) value: ~a" value)
-		   (openhab:do-post "ElecKWattsPerDay" value))
-	   :call-push-p t)
-  :persistence '(:id :default
-		 :frequency :every-change
-		 :load-on-start t)
-  :persistence '(:id :influx
-		 :frequency :every-change))
-
-(defitem 'elec-reader-state-input "ElecReaderStateInput" 'float
-  :initial-value 0)
-    
 (defrule "Calculate elec kw/day from new input"
   :when-item-change 'elec-reader-state-input
   :do (lambda (trigger)
@@ -309,30 +288,9 @@
 ;; Garden reader
 ;; -------------
 
-(defitem 'elec-garden-reader-state "ElecGarReaderState" 'float
-  (binding :push (lambda (value)
-		   (log:debug "Pushing (ElecGarReaderState) value: ~a" value)
-		   (openhab:do-post "ElecGarReaderState" value))
-	   :call-push-p t)
-  :persistence '(:id :default
-		 :frequency :every-change
-		 :load-on-start t)
-  :persistence '(:id :influx
-		 :frequency :every-change))
-
-(defitem 'elec-garden-kw-per-day "ElecGarKWattsPerDay" 'float
-  (binding :push (lambda (value)
-		   (log:debug "Pushing (ElecGarKWattsPerDay) value: ~a" value)
-		   (openhab:do-post "ElecGarKWattsPerDay" value))
-	   :call-push-p t)
-  :persistence '(:id :default
-		 :frequency :every-change
-		 :load-on-start t)
-  :persistence '(:id :influx
-		 :frequency :every-change))
-
-(defitem 'elec-garden-reader-state-input "ElecGarReaderStateInput" 'float
-  :initial-value 0)
+(gen-reader-item-tripple '(elec-garden-reader-state . "ElecGarReaderState")
+			 '(elec-garden-reader-state-input . "ElecGarReaderStateInput")
+			 '(elec-garden-kw-per-day . "ElecGarKWattsPerDay"))
     
 (defrule "Calculate elec kw/day (garden) from new input"
   :when-item-change 'elec-garden-reader-state-input
