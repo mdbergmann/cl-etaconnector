@@ -2,7 +2,7 @@
   :version "0.1.0"
   :author "Manfred Bergmann"
   :license "Apache-2"
-  :depends-on ("cl-hab"
+  :depends-on ("chipi"
                "cserial-port"
                "drakma"
                "bit-smasher"

@@ -4,17 +4,17 @@
   (ql:quickload :cl-eta))
 
 (defpackage :eta-hab
-  (:use :cl :cl-hab.hab)
-  (:import-from #:cl-hab.persistence
+  (:use :cl :chipi.hab)
+  (:import-from #:chipi.persistence
                 #:persistence)
-  (:import-from #:cl-hab.simple-persistence
+  (:import-from #:chipi.simple-persistence
                 #:make-simple-persistence)
-  (:import-from #:cl-hab.influx-persistence
+  (:import-from #:chipi.influx-persistence
                 #:make-influx-persistence))
 (in-package :eta-hab)
 
 (log:config :warn)
-(log:config '(cl-hab) :warn)
+(log:config '(chipi) :warn)
 (log:config '(cl-eta) :info)
 (log:config '(eta-hab) :info)
 (log:config :sane :this-console :daily "logs/app.log")
