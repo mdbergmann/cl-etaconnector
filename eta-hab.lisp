@@ -37,6 +37,10 @@
 (defmacro gen-reader-item-tripple (reader-pair
 				   reader-in-pair
 				   qm-pair)
+  "Macro that generates 3 items for a reader, a reader-in and a qm item.
+The 'reader' (or 'meter') item represents the current value of the currency, water, whatever reader/meter.
+The 'reader-in' item represents the last value that was read from the reader/meter and is used to trigger the calculation of the qm item.
+The 'qm' item represents the calculated value per day (or whatever) from the reader/meter."
   (let ((item-name (gensym))
 	(item-label (gensym))
 	(value-1 (gensym))
@@ -361,7 +365,6 @@
 
 ;; Garden reader
 ;; -------------
-;; 2181104597
 
 (gen-reader-item-tripple '(water-garden-reader-state . "GardenWaterReaderState")
 			'(water-garden-reader-state-input . "GardenWaterReaderStateInput")
@@ -374,7 +377,6 @@
 
 ;; Fresh-in reader
 ;; -----------
-;; 21189395
 
 (gen-reader-item-tripple '(water-fresh-reader-state . "FreshInWaterReaderState")
 			'(water-fresh-reader-state-input . "FreshInWaterReaderStateInput")
@@ -398,7 +400,7 @@
 		    "zist"))
 
 ;; Garden-Gunda
-;; 2300102414
+;; ------------
 
 (gen-reader-item-tripple '(water-alt-garden-reader-state . nil)
 			'(water-alt-garden-reader-state-input . nil)
