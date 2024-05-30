@@ -35,8 +35,8 @@
        :bucket "hab")))
 
 (defmacro gen-reader-item-tripple (reader-pair
-				   reader-in-pair
-				   qm-pair)
+				                   reader-in-pair
+				                   qm-pair)
   "Macro that generates 3 items for a reader, a reader-in and a qm item.
 The 'reader' (or 'meter') item represents the current value of the currency, water, whatever reader/meter.
 The 'reader-in' item represents the last value that was read from the reader/meter and is used to trigger the calculation of the qm item.
