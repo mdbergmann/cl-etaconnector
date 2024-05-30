@@ -44,15 +44,17 @@ The 'qm' item represents the calculated value per day (or whatever) from the rea
   (let ((item-name (gensym))
 	(item-label (gensym))
 	(value-1 (gensym))
-	(value-2 (gensym)))
+	(value-2 (gensym))
+	(value-sf (gensym)))
     `(progn
        (destructuring-bind (,item-name . ,item-label)
 	   ,reader-pair
 	 (defitem ,item-name ,item-label 'float
 	   (binding :push (lambda (,value-1)
 			    (when ,item-label
-			      (log:debug "Pushing (~a) value: ~a" ,item-label ,value-1)
-			      (openhab:do-post ,item-label ,value-1)))
+			      (let ((,value-sf (coerce ,value-1 'single-float)))
+				(log:info "Pushing (~a) value: ~a" ,item-label ,value-sf)
+				(openhab:do-post ,item-label ,value-sf))))
 		    :call-push-p t)
 	   :persistence '(:id :default
 			  :frequency :every-change
