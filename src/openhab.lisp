@@ -9,12 +9,12 @@
 
 (defun do-post (resource data)
   (let ((post-data 
-	  (if (typep data 'double-float)
-	    (coerce data 'single-float)
-	    data)))
+	  (format nil "~f" (if (typep data 'double-float)
+			       (coerce data 'single-float)
+			       data))))
     (log:info "posting item: ~a, value: ~a" resource post-data)
     (drakma:http-request (format nil "~a~a" *openhab-base-url* resource)
 			 :method :post
-			 :content (write-to-string post-data)
+			 :content post-data
 			 :content-type "text/plain"))
   :ok)
