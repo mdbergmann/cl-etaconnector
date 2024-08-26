@@ -140,8 +140,11 @@ The 'qm' item represents the calculated value per day (or whatever) from the rea
       (multiple-value-bind (total daily)
           (eta-helper:calc-solar-total total-value total-timestamp)
 	(log:info "New daily solar: ~a W/h" daily)
-        (item:set-value total-day-item daily)
-        (item:set-value total-last-item total)))))
+	(if (< daily 0)
+	    (log:info "Daily value < 0, not recoding.")
+	    (progn
+	      (item:set-value total-day-item daily)
+	      (item:set-value total-last-item total)))))))
 
 (defrule "Calc-Daily-Solar-Total" ; in kW
   :when-cron '(:minute 50 :hour 23)
