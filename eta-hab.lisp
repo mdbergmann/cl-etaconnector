@@ -2,7 +2,7 @@
   (asdf:load-system :py4cl)
   (load #P"src/ina219-if.lisp") ; This helps with recompiling ina219
   (asdf:load-system :cl-eta)
-  (asdf:load-asd "/home/manfred/quicklisp/localprojects/chipi/bindings/knx/binding-knx-asd"
+  (asdf:load-asd "/home/manfred/quicklisp/localprojects/chipi/bindings/knx/binding-knx.asd"
 		 :name "binding-knx")
   (asdf:load-system :binding-knx))
 
@@ -25,7 +25,7 @@
 
 ;; configure underlying actor system, timers, cron, etc.
 (defconfig
-  ;;(knx-init :gw-host "192.168.50.40")
+  (knx-init :gw-host "192.168.50.40")
   )
 
 (defpersistence :default
@@ -465,11 +465,11 @@ The 'qm' item represents the calculated value per day (or whatever) from the rea
 
 ;; Plugs
 
-;; (defitem 'switch-plug-garden-south-wall
-;;   "Steckdose Garten Süd Wand" 'boolean
-;;   (knx-binding :ga '(:read "3/4/1" :write "3/4/0")
-;; 	       :dpt "1.001"
-;; 	       :call-push-p t))
+(defitem 'switch-plug-garden-south-wall
+  "Steckdose Garten Süd Wand" 'boolean
+  (knx-binding :ga '(:read "3/4/1" :write "3/4/0")
+	       :dpt "1.001"
+	       :call-push-p t))
 
 
 #|
