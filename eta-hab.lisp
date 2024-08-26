@@ -1,10 +1,13 @@
 (eval-when (:compile-toplevel :load-toplevel :execute)
-  (ql:quickload :py4cl)
+  (asdf:load-system :py4cl)
   (load #P"src/ina219-if.lisp") ; This helps with recompiling ina219
-  (ql:quickload :cl-eta))
+  (asdf:load-system :cl-eta)
+  (asdf:load-asd "/home/manfred/quicklisp/localprojects/chipi/bindings/knx/binding-knx-asd"
+		 :name "binding-knx")
+  (asdf:load-system :binding-knx))
 
 (defpackage :eta-hab
-  (:use :cl :chipi.hab)
+  (:use :cl :chipi.hab :chipi.binding.knx)
   (:import-from #:chipi.persistence
                 #:persistence)
   (:import-from #:chipi.simple-persistence
@@ -17,10 +20,13 @@
 (log:config '(chipi) :warn)
 (log:config '(cl-eta) :info)
 (log:config '(eta-hab) :info)
+(log:config '(knx-conn) :info)
 (log:config :sane :this-console :daily "logs/app.log")
 
 ;; configure underlying actor system, timers, cron, etc.
-(defconfig)
+(defconfig
+  ;;(knx-init :gw-host "192.168.50.40")
+  )
 
 (defpersistence :default
     (lambda (id)
@@ -33,6 +39,18 @@
        :token "A005mInE0uPMoW6l-kHmsxX1l8XC14Uw0UyAjV20GDq7qev0M1-kaGy77M7JH7wsIrc3-rTm1hRoHZ735Q4tHw=="
        :org "mabe"
        :bucket "hab")))
+
+(defrule "Init externals"
+  :when-cron '(:boot-only t)  ; beware all other cron keys are at :every
+  :do (lambda (trigger)
+        (declare (ignore trigger))
+	(log:info "Initializing externals...")
+	(ignore-errors
+	 (eta-helper:ina-init))
+	(ignore-errors
+	 (eta-helper:eta-init)
+	 (eta-helper:eta-start-record))
+	(log:info "Initializing externals...done")))
 
 (defmacro gen-reader-item-tripple (reader-pair
 				                   reader-in-pair
@@ -82,7 +100,7 @@ The 'qm' item represents the calculated value per day (or whatever) from the rea
 ;; ---------------------
 (defitem 'zist-sensor-curr "ZistSensorCurrency" 'float
   (binding :initial-delay 5
-           :delay (* 60 10)
+           :delay (* 60 10) ;; 10 minutes
            :pull (lambda () (eta-helper:ina-read))
            :push (lambda (value)
                    (log:debug "Pushing value: ~a" value)
@@ -193,14 +211,6 @@ The 'qm' item represents the calculated value per day (or whatever) from the rea
 		 :load-on-start t)
   :persistence '(:id :influx
 		 :frequency :every-change))
-
-(defrule "Init externals"
-  :when-cron '(:boot-only t)  ; beware all other cron keys are at :every
-  :do (lambda (trigger)
-        (declare (ignore trigger))
-        (eta-helper:ina-init)
-        (eta-helper:eta-init)
-        (eta-helper:eta-start-record)))
 
 (defun apply-monitors (monitors apply-fun)
   "Applies the given MONITORS to the items by setting the monitor value."
@@ -448,6 +458,19 @@ The 'qm' item represents the calculated value per day (or whatever) from the rea
 	       chips-item-instance)
 	    (item:set-value qm3-item-instance new-qm3-per-day)
 	    (item:set-value chips-item-instance input-value)))))
+
+;; ----------------------------
+;; KNX items
+;; ----------------------------
+
+;; Plugs
+
+;; (defitem 'switch-plug-garden-south-wall
+;;   "Steckdose Garten Süd Wand" 'boolean
+;;   (knx-binding :ga '(:read "3/4/1" :write "3/4/0")
+;; 	       :dpt "1.001"
+;; 	       :call-push-p t))
+
 
 #|
 
