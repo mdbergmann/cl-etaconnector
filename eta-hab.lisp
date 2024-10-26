@@ -181,7 +181,7 @@ The 'qm' item represents the calculated value per day (or whatever) from the rea
     (eta-temp-aussen "EtaTempAussen" float)
     (eta-temp-boiler "EtaBoiler" float)
     (eta-temp-boiler-unten "EtaBoilerUnten" float)
-    (eta-temp-boiler-untsolar "EtaBoilerUntSolar" float)
+    ;;(eta-temp-boiler-untsolar "EtaBoilerUntSolar" float)
     (eta-temp-kessel "EtaKessel" float)
     (eta-temp-kessel-rueck "EtaKesselRuecklauf" float)
     ;;(eta-temp-kollektor "EtaKollektor" float)
