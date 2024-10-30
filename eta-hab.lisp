@@ -67,6 +67,7 @@ The 'qm' item represents the calculated value per day (or whatever) from the rea
        (destructuring-bind (,item-name . ,item-label)
 	   ,reader-pair
 	 (defitem ,item-name ,item-label 'float
+	   :initial-value 0.0
 	   (binding :push (lambda (,value-1)
 			    (when ,item-label
 			      (log:debug "Pushing (~a) value: ~a" ,item-label ,value-1)
@@ -84,6 +85,7 @@ The 'qm' item represents the calculated value per day (or whatever) from the rea
        (destructuring-bind (,item-name . ,item-label)
 	   ,qm-pair
 	 (defitem ,item-name ,item-label 'float
+	   :initial-value 0.0
 	   (binding :push (lambda (,value-2)
 			    (log:debug "Pushing (~a) value: ~a" ,item-label ,value-2)
 			    (openhab:do-post ,item-label ,value-2))
@@ -319,6 +321,25 @@ The 'qm' item represents the calculated value per day (or whatever) from the rea
 	       (get-item 'elec-garden-reader-state-input)
 	       reader-item)
 	    (item:set-value (get-item 'elec-garden-kw-per-day) new-km-per-day)
+	    (item:set-value reader-item input-value)))))
+
+;; Altes haus reader
+;; -------------
+
+(gen-reader-item-tripple '(elec-oldh-reader-state . "ElecOldReaderState")
+			 '(elec-oldh-reader-state-input . "ElecOldReaderStateInput")
+			 '(elec-oldh-kw-per-day . "ElecOldKWattsPerDay"))
+
+(defrule "Calculate elec kw/day (altes) from new input"
+  :when-item-change 'elec-oldh-reader-state-input
+  :do (lambda (trigger)
+	(declare (ignore trigger))
+	(let ((reader-item (get-item 'elec-oldh-reader-state)))
+	  (multiple-value-bind (new-km-per-day input-value)
+	      (calc-elec-kmperday
+	       (get-item 'elec-oldh-reader-state-input)
+	       reader-item)
+	    (item:set-value (get-item 'elec-oldh-kw-per-day) new-km-per-day)
 	    (item:set-value reader-item input-value)))))
 
 ;; -----------------------------
