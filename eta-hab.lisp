@@ -2,8 +2,8 @@
   (asdf:load-system :py4cl)
   (load #P"src/ina219-if.lisp") ; This helps with recompiling ina219
   (asdf:load-system :cl-eta)
-  (asdf:load-asd "/home/manfred/quicklisp/localprojects/chipi/bindings/knx/binding-knx.asd"
-		 :name "binding-knx")
+  (asdf:load-asd "/home/manfred/quicklisp/local-projects/chipi/bindings/knx/binding-knx.asd"
+                 :name "binding-knx")
   (asdf:load-system :binding-knx))
 
 (defpackage :eta-hab
@@ -51,51 +51,6 @@
 	 (eta-helper:eta-init)
 	 (eta-helper:eta-start-record))
 	(log:info "Initializing externals...done")))
-
-(defmacro gen-reader-item-tripple (reader-pair
-				   reader-in-pair
-				   qm-pair)
-  "Macro that generates 3 items for a reader, a reader-in and a qm item.
-The 'reader' (or 'meter') item represents the current value of the currency, water, whatever reader/meter.
-The 'reader-in' item represents the last value that was read from the reader/meter and is used to trigger the calculation of the qm item.
-The 'qm' item represents the calculated value per day (or whatever) from the reader/meter."
-  (let ((item-name (gensym))
-	(item-label (gensym))
-	(value-1 (gensym))
-	(value-2 (gensym)))
-    `(progn
-       (destructuring-bind (,item-name . ,item-label)
-	   ,reader-pair
-	 (defitem ,item-name ,item-label 'float
-	   :initial-value 0.0
-	   (binding :push (lambda (,value-1)
-			    (when ,item-label
-			      (log:debug "Pushing (~a) value: ~a" ,item-label ,value-1)
-			      (openhab:do-post ,item-label ,value-1)))
-		    :call-push-p t)
-	   :persistence '(:id :default
-			  :frequency :every-change
-			  :load-on-start t)
-	   :persistence '(:id influx
-			  :frequence :every-change)))
-       (destructuring-bind (,item-name . ,item-label)
-	   ,reader-in-pair
-	 (defitem ,item-name ,item-label 'float
-	   :initial-value 0))
-       (destructuring-bind (,item-name . ,item-label)
-	   ,qm-pair
-	 (defitem ,item-name ,item-label 'float
-	   :initial-value 0.0
-	   (binding :push (lambda (,value-2)
-			    (log:debug "Pushing (~a) value: ~a" ,item-label ,value-2)
-			    (openhab:do-post ,item-label ,value-2))
-		    :call-push-p t)
-	   :persistence '(:id :default
-			  :frequency :every-change
-			  :load-on-start t)
-	   :persistence '(:id :influx
-			  :frequency :every-change))
-	 ))))
 
 ;; ---------------------
 ;; Zisterne
@@ -266,6 +221,51 @@ The 'qm' item represents the calculated value per day (or whatever) from the rea
 ;; Strom
 ;; ---------------------
 
+(defmacro gen-reader-item-tripple (reader-pair
+                                   reader-in-pair
+                                   qm-pair)
+  "Macro that generates 3 items for a reader, a reader-in and a qm item.
+The 'reader' (or 'meter') item represents the current value of the currency, water, whatever reader/meter.
+The 'reader-in' item represents the last value that was read from the reader/meter and is used to trigger the calculation of the qm item.
+The 'qm' item represents the calculated value per day (or whatever) from the reader/meter."
+  (let ((item-name (gensym))
+	(item-label (gensym))
+	(value-1 (gensym))
+	(value-2 (gensym)))
+    `(progn
+       (destructuring-bind (,item-name . ,item-label)
+	   ,reader-pair
+	 (defitem ,item-name ,item-label 'float
+	   :initial-value 0.0
+	   (binding :push (lambda (,value-1)
+			    (when ,item-label
+			      (log:debug "Pushing (~a) value: ~a" ,item-label ,value-1)
+			      (openhab:do-post ,item-label ,value-1)))
+		    :call-push-p t)
+	   :persistence '(:id :default
+			  :frequency :every-change
+			  :load-on-start t)
+	   :persistence '(:id influx
+			  :frequence :every-change)))
+       (destructuring-bind (,item-name . ,item-label)
+	   ,reader-in-pair
+	 (defitem ,item-name ,item-label 'float
+	   :initial-value 0))
+       (destructuring-bind (,item-name . ,item-label)
+	   ,qm-pair
+	 (defitem ,item-name ,item-label 'float
+	   :initial-value 0.0
+	   (binding :push (lambda (,value-2)
+			    (log:debug "Pushing (~a) value: ~a" ,item-label ,value-2)
+			    (openhab:do-post ,item-label ,value-2))
+		    :call-push-p t)
+	   :persistence '(:id :default
+			  :frequency :every-change
+			  :load-on-start t)
+	   :persistence '(:id :influx
+			  :frequency :every-change))
+	 ))))
+
 (defun diff-days (former-ts later-ts)
   (let* ((uni1 (local-time:timestamp-to-universal former-ts))
 	 (uni2 (local-time:timestamp-to-universal later-ts))
@@ -285,62 +285,62 @@ The 'qm' item represents the calculated value per day (or whatever) from the rea
        (/ (- input-value reader-value) diff-days)
        input-value))))
 
+(defmacro gen-reader-input-rule (reader-item-sym
+                                 input-item-sym
+                                 per-day-item-sym
+                                 label)
+  (let ((reader-item (gensym))
+        (input-item (gensym))
+        (per-day-item (gensym))
+        (new-km-per-day (gensym))
+        (input-value (gensym)))
+    `(defrule ,label
+         :when-item-change ,input-item-sym
+         :do (lambda (trigger)
+               (declare (ignore trigger))
+               (let ((,reader-item (get-item ,reader-item-sym))
+                     (,input-item (get-item ,input-item-sym))
+                     (,per-day-item (get-item ,per-day-item-sym)))
+                 (multiple-value-bind (,new-km-per-day ,input-value)
+                     (calc-elec-kmperday ,input-item ,reader-item)
+                   (item:set-value ,per-day-item ,new-km-per-day)
+                   (item:set-value ,reader-item ,input-value)))))))
+
 ;; Master reader
 ;; -------------
 
 (gen-reader-item-tripple '(elec-reader-state . "ElecReaderState")
-			 '(elec-reader-state-input . "ElecReaderStateInput")
-			 '(elec-kw-per-day . "ElecKWattsPerDay"))
+                         '(elec-reader-state-input . "ElecReaderStateInput")
+                         '(elec-kw-per-day . "ElecKWattsPerDay"))
 
-(defrule "Calculate elec kw/day from new input"
-  :when-item-change 'elec-reader-state-input
-  :do (lambda (trigger)
-	(declare (ignore trigger))
-	(let ((reader-item (get-item 'elec-reader-state)))
-	  (multiple-value-bind (new-km-per-day input-value)
-	      (calc-elec-kmperday
-	       (get-item 'elec-reader-state-input)
-	       reader-item)
-	    (item:set-value (get-item 'elec-kw-per-day) new-km-per-day)
-	    (item:set-value reader-item input-value)))))
+(gen-reader-input-rule 'elec-reader-state
+                       'elec-reader-state-input
+                       'elec-km-per-day
+                       "Calculate elec kw/day from new input")
 
 ;; Garden reader
 ;; -------------
 
 (gen-reader-item-tripple '(elec-garden-reader-state . "ElecGarReaderState")
-			 '(elec-garden-reader-state-input . "ElecGarReaderStateInput")
-			 '(elec-garden-kw-per-day . "ElecGarKWattsPerDay"))
+                         '(elec-garden-reader-state-input . "ElecGarReaderStateInput")
+                         '(elec-garden-kw-per-day . "ElecGarKWattsPerDay"))
     
-(defrule "Calculate elec kw/day (garden) from new input"
-  :when-item-change 'elec-garden-reader-state-input
-  :do (lambda (trigger)
-	(declare (ignore trigger))
-	(let ((reader-item (get-item 'elec-garden-reader-state)))
-	  (multiple-value-bind (new-km-per-day input-value)
-	      (calc-elec-kmperday
-	       (get-item 'elec-garden-reader-state-input)
-	       reader-item)
-	    (item:set-value (get-item 'elec-garden-kw-per-day) new-km-per-day)
-	    (item:set-value reader-item input-value)))))
+(gen-reader-input-rule 'elec-garden-reader-state
+                       'elec-garden-reader-state-input
+                       'elec-garden-km-per-day
+                       "Calculate elec kw/day (garden) from new input")
 
 ;; Altes haus reader
 ;; -------------
 
 (gen-reader-item-tripple '(elec-oldh-reader-state . "ElecOldReaderState")
-			 '(elec-oldh-reader-state-input . "ElecOldReaderStateInput")
-			 '(elec-oldh-kw-per-day . "ElecOldKWattsPerDay"))
+                         '(elec-oldh-reader-state-input . "ElecOldReaderStateInput")
+                         '(elec-oldh-kw-per-day . "ElecOldKWattsPerDay"))
 
-(defrule "Calculate elec kw/day (altes) from new input"
-  :when-item-change 'elec-oldh-reader-state-input
-  :do (lambda (trigger)
-	(declare (ignore trigger))
-	(let ((reader-item (get-item 'elec-oldh-reader-state)))
-	  (multiple-value-bind (new-km-per-day input-value)
-	      (calc-elec-kmperday
-	       (get-item 'elec-oldh-reader-state-input)
-	       reader-item)
-	    (item:set-value (get-item 'elec-oldh-kw-per-day) new-km-per-day)
-	    (item:set-value reader-item input-value)))))
+(gen-reader-input-rule 'elec-oldh-reader-state
+                       'elec-oldh-reader-state-input
+                       'elec-oldh-km-per-day
+                       "Calculate elec kw/day (altes) from new input")
 
 ;; -----------------------------
 ;; Water
@@ -360,15 +360,15 @@ The 'qm' item represents the calculated value per day (or whatever) from the rea
        input-value))))
 
 (defmacro gen-water-qm-rule ((reader-item
-			      reader-in-item
-			      qm-item
-			      label))
+                              reader-in-item
+                              qm-item
+                              label))
   (let ((rule-name (gensym))
-	(reader-item-instance (gensym))
-	(reader-in-item-instance (gensym))
-	(qm-item-instance (gensym))
-	(new-qm-per-day (gensym))
-	(input-value (gensym)))
+        (reader-item-instance (gensym))
+        (reader-in-item-instance (gensym))
+        (qm-item-instance (gensym))
+        (new-qm-per-day (gensym))
+        (input-value (gensym)))
     (setf rule-name (format nil "Calculate water (~a) qm/day from new input" label))
     `(defrule ,rule-name
        :when-item-change ,reader-in-item
