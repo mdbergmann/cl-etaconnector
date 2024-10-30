@@ -68,64 +68,6 @@
                  :load-on-start t)
   :persistence '(:id :influx
                  :frequency :every-change))
-
-;; ---------------------
-;; Solar
-;; ---------------------
-(defitem 'sol-power-total-last "SolarPowerTotalLast" 'integer
-  ;; this item is just a storage for the last transmitted value
-  ;; in W/h
-  :persistence '(:id :default
-                 :frequency :every-change
-                 :load-on-start t))
-(defitem 'sol-power-total-day "SolarPowerTotalDay" 'integer
-  ;; in W/h
-  :initial-value 0
-  (binding :push (lambda (value)
-                   (log:debug "Pushing value: ~a" value)
-                   (openhab:do-post "SolarPowerTotalDay" value))
-           :call-push-p t)
-  :persistence '(:id :default
-                 :frequency :every-change
-                 :load-on-start t)
-  :persistence '(:id :influx
-                 :frequency :every-change))
-(defitem 'sol-power-mom "SolarPowerMom" 'integer
-  (binding :initial-delay 5
-           :delay 30
-           :pull (lambda () (eta-helper:solar-read))
-           :push (lambda (value)
-                   (log:debug "Pushing value: ~a" value)
-                   (openhab:do-post "SolarPowerMom" value))
-           :call-push-p t)
-  :persistence '(:id :default
-                 :frequency :every-change
-                 :load-on-start t)
-  :persistence '(:id :influx
-                 :frequency :every-change))
-
-(defun calc-daily-solar-total ()
-  (log:info "Calculating daily total solar...")
-  (let ((total-day-item (get-item 'sol-power-total-day))
-        (total-last-item (get-item 'sol-power-total-last)))
-    (let* ((total-last-state (item:get-item-stateq total-last-item))
-	   (total-value (item:item-state-value total-last-state))
-	   (total-timestamp (item:item-state-timestamp total-last-state)))
-      (log:info "Have last total value: ~a W/h at timestamp: ~a" total-value total-timestamp)
-      (multiple-value-bind (total daily)
-          (eta-helper:calc-solar-total total-value total-timestamp)
-	(log:info "New daily solar: ~a W/h" daily)
-	(if (< daily 0)
-	    (log:info "Daily value < 0, not recoding.")
-	    (progn
-	      (item:set-value total-day-item daily)
-	      (item:set-value total-last-item total)))))))
-
-(defrule "Calc-Daily-Solar-Total" ; in kW
-  :when-cron '(:minute 50 :hour 23)
-  :do (lambda (trigger)
-        (declare (ignore trigger))
-        (calc-daily-solar-total)))
         
 ;; ---------------------
 ;; Eta
@@ -160,14 +102,14 @@
 
 (defitem 'eta-op-hours-day-weekly "HeatingETAOpHoursPerDay" 'integer
   (binding :push (lambda (value)
-		   (log:debug "Pushing (HeatingETAOpHoursPerDay) value: ~a" value)
-		   (openhab:do-post "HeatingETAOpHoursPerDay" value))
-	   :call-push-p t)
+                   (log:debug "Pushing (HeatingETAOpHoursPerDay) value: ~a" value)
+                   (openhab:do-post "HeatingETAOpHoursPerDay" value))
+           :call-push-p t)
   :persistence '(:id :default
-		 :frequency :every-change
-		 :load-on-start t)
+                 :frequency :every-change
+                 :load-on-start t)
   :persistence '(:id :influx
-		 :frequency :every-change))
+                 :frequency :every-change))
 
 (defun apply-monitors (monitors apply-fun)
   "Applies the given MONITORS to the items by setting the monitor value."
@@ -238,33 +180,33 @@ The 'qm' item represents the calculated value per day (or whatever) from the rea
 	 (defitem ,item-name ,item-label 'float
 	   :initial-value 0.0
 	   (binding :push (lambda (,value-1)
-			    (when ,item-label
-			      (log:debug "Pushing (~a) value: ~a" ,item-label ,value-1)
-			      (openhab:do-post ,item-label ,value-1)))
-		    :call-push-p t)
+                        (when ,item-label
+                          (log:debug "Pushing (~a) value: ~a" ,item-label ,value-1)
+                          (openhab:do-post ,item-label ,value-1)))
+                :call-push-p t)
 	   :persistence '(:id :default
-			  :frequency :every-change
-			  :load-on-start t)
+                      :frequency :every-change
+                      :load-on-start t)
 	   :persistence '(:id influx
-			  :frequence :every-change)))
+                      :frequence :every-change)))
        (destructuring-bind (,item-name . ,item-label)
-	   ,reader-in-pair
-	 (defitem ,item-name ,item-label 'float
-	   :initial-value 0))
+           ,reader-in-pair
+         (defitem ,item-name ,item-label 'float
+           :initial-value 0))
        (destructuring-bind (,item-name . ,item-label)
-	   ,qm-pair
-	 (defitem ,item-name ,item-label 'float
-	   :initial-value 0.0
-	   (binding :push (lambda (,value-2)
-			    (log:debug "Pushing (~a) value: ~a" ,item-label ,value-2)
-			    (openhab:do-post ,item-label ,value-2))
-		    :call-push-p t)
-	   :persistence '(:id :default
-			  :frequency :every-change
-			  :load-on-start t)
-	   :persistence '(:id :influx
-			  :frequency :every-change))
-	 ))))
+           ,qm-pair
+         (defitem ,item-name ,item-label 'float
+           :initial-value 0.0
+           (binding :push (lambda (,value-2)
+                            (log:debug "Pushing (~a) value: ~a" ,item-label ,value-2)
+                            (openhab:do-post ,item-label ,value-2))
+                    :call-push-p t)
+           :persistence '(:id :default
+                          :frequency :every-change
+                          :load-on-start t)
+           :persistence '(:id :influx
+                          :frequency :every-change))
+         ))))
 
 (defun diff-days (former-ts later-ts)
   (let* ((uni1 (local-time:timestamp-to-universal former-ts))
@@ -480,6 +422,93 @@ The 'qm' item represents the calculated value per day (or whatever) from the rea
 	    (item:set-value qm3-item-instance new-qm3-per-day)
 	    (item:set-value chips-item-instance input-value)))))
 
+;; ---------------------
+;; Solar
+;; ---------------------
+(defitem 'sol-power-total-last "SolarPowerTotalLast" 'integer
+  ;; this item is just a storage for the last transmitted value
+  ;; in W/h
+  :persistence '(:id :default
+                 :frequency :every-change
+                 :load-on-start t))
+(defitem 'sol-power-total-day "SolarPowerTotalDay" 'integer
+  ;; in W/h
+  :initial-value 0
+  (binding :push (lambda (value)
+                   (log:debug "Pushing value: ~a" value)
+                   (openhab:do-post "SolarPowerTotalDay" value))
+           :call-push-p t)
+  :persistence '(:id :default
+                 :frequency :every-change
+                 :load-on-start t)
+  :persistence '(:id :influx
+                 :frequency :every-change))
+(defitem 'sol-power-mom "SolarPowerMom" 'integer
+  (binding :initial-delay 5
+           :delay 30
+           :pull (lambda () (eta-helper:solar-read))
+           :push (lambda (value)
+                   (log:debug "Pushing value: ~a" value)
+                   (openhab:do-post "SolarPowerMom" value))
+           :call-push-p t)
+  :persistence '(:id :default
+                 :frequency :every-change
+                 :load-on-start t)
+  :persistence '(:id :influx
+                 :frequency :every-change))
+
+(defun calc-daily-solar-total ()
+  (log:info "Calculating daily total solar...")
+  (let ((total-day-item (get-item 'sol-power-total-day))
+        (total-last-item (get-item 'sol-power-total-last)))
+    (let* ((total-last-state (item:get-item-stateq total-last-item))
+	   (total-value (item:item-state-value total-last-state))
+	   (total-timestamp (item:item-state-timestamp total-last-state)))
+      (log:info "Have last total value: ~a W/h at timestamp: ~a" total-value total-timestamp)
+      (multiple-value-bind (total daily)
+          (eta-helper:calc-solar-total total-value total-timestamp)
+	(log:info "New daily solar: ~a W/h" daily)
+	(if (< daily 0)
+	    (log:info "Daily value < 0, not recoding.")
+	    (progn
+	      (item:set-value total-day-item daily)
+	      (item:set-value total-last-item total)))))))
+
+(defrule "Calc-Daily-Solar-Total" ; in kW
+  :when-cron '(:minute 50 :hour 23)
+  :do (lambda (trigger)
+        (declare (ignore trigger))
+        (calc-daily-solar-total)))
+
+;; ----------------------------
+;; Fenecon readers
+;; ----------------------------
+
+(defvar *fenecon-items*
+  '((fen-bat-load-state "FenBatLoadState" "ess0/Soc" integer)
+    (fen-bat-charge-act-power "FenBatChargePower" "ess0/ActivePower" integer)
+    (fen-pv-str1-act-power "FenPVStr1ActualPower" "charger10/ActualPower" integer)
+    (fen-pv-str2-act-power "FenPVStr2ActualPower" "charger11/ActualPower" integer)
+    (fen-grid-act-power "FenGridActualPower" "meter0/ActivePower" integer)))
+
+(dolist (i *fenecon-items*)
+  (destructuring-bind (item-id item-label rest-path item-val-type) i
+    (defitem item-id item-label item-val-type
+      :initial-value 0
+      (binding :pull (lambda () (eta-helper:fen-read-item rest-path))
+               :push (lambda (value)
+                       (log:debug "Pushing value: ~a" value)
+                       ;;(openhab:do-post (second i) value)
+                       )
+               :initial-delay 10
+               :delay 30
+               :call-push-p t)
+      :persistence '(:id :default
+                     :frequency :every-change
+                     :load-on-start t)
+      :persistence '(:id :influx
+                     :frequency :every-change))))
+
 ;; ----------------------------
 ;; KNX items
 ;; ----------------------------
@@ -489,8 +518,8 @@ The 'qm' item represents the calculated value per day (or whatever) from the rea
 (defitem 'switch-plug-garden-south-wall
   "Steckdose Garten Süd Wand" 'boolean
   (knx-binding :ga '(:read "3/4/1" :write "3/4/0")
-	       :dpt "1.001"
-	       :call-push-p t))
+               :dpt "1.001"
+               :call-push-p t))
 
 
 #|

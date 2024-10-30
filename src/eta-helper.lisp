@@ -5,6 +5,7 @@
            #:ina-init
            #:solar-read
            #:calc-solar-total
+           #:fen-read-item
            #:eta-init
            #:eta-close
            #:eta-start-record
@@ -77,6 +78,21 @@
       (log:info "Solar total: ~a W/h" total)
       (log:info "Solar daily: ~a W/h" new-daily)
       (values total new-daily))))
+
+;; ----------------------------------------
+;; fen
+;; ----------------------------------------
+
+(defun fen-read-item (rest-path)
+  (log:info "Reading Fenecon item on path: ~a" rest-path)
+  (multiple-value-bind (stat value)
+      (fen-if:read-item rest-path)
+    (case stat
+      (:ok (progn
+             (log:info "Received value: ~a for rest item: ~a" value rest-path)
+             value))
+      (otherwise
+       (error "Error on retrieving fen rest value, stat: ~a" stat)))))
 
 ;; ----------------------------------------
 ;; eta
