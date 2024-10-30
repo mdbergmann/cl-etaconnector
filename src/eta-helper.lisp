@@ -84,7 +84,7 @@
 ;; ----------------------------------------
 
 (defun fen-read-item (rest-path)
-  (log:info "Reading Fenecon item on path: ~a" rest-path)
+  (log:debug "Reading Fenecon item on path: ~a" rest-path)
   (multiple-value-bind (stat value)
       (fen-if:read-item rest-path)
     (case stat

@@ -484,12 +484,13 @@ The 'qm' item represents the calculated value per day (or whatever) from the rea
 ;; Fenecon readers
 ;; ----------------------------
 
-(defvar *fenecon-items*
+(defparameter *fenecon-items*
   '((fen-bat-load-state "FenBatLoadState" "ess0/Soc" integer)
     (fen-bat-charge-act-power "FenBatChargePower" "ess0/ActivePower" integer)
     (fen-pv-str1-act-power "FenPVStr1ActualPower" "charger10/ActualPower" integer)
     (fen-pv-str2-act-power "FenPVStr2ActualPower" "charger11/ActualPower" integer)
-    (fen-grid-act-power "FenGridActualPower" "meter0/ActivePower" integer)))
+    (fen-grid-act-power "FenGridActualPower" "meter0/ActivePower" integer)
+    (fen-consum-act-power "FenConsumptionActivePower" "_sum/ConsumptionActivePower" integer)))
 
 (dolist (i *fenecon-items*)
   (destructuring-bind (item-id item-label rest-path item-val-type) i
