@@ -449,7 +449,8 @@ The 'qm' item represents the calculated value per day (or whatever) from the rea
            :pull (lambda () (eta-helper:solar-read))
            :push (lambda (value)
                    (log:debug "Pushing value: ~a" value)
-                   (openhab:do-post "SolarPowerMom" value))
+                   ;;(openhab:do-post "SolarPowerMom" value)
+		   )
            :call-push-p t)
   :persistence '(:id :default
                  :frequency :every-change
@@ -486,7 +487,8 @@ The 'qm' item represents the calculated value per day (or whatever) from the rea
 
 (defparameter *fenecon-items*
   '((fen-bat-load-state "FenBatLoadState" "ess0/Soc" integer)
-    (fen-bat-charge-act-power "FenBatChargePower" "ess0/ActivePower" integer)
+    (fen-bat-charge-act-power "FenBatChargePower" "ess0/DcDischargePower" integer)
+    (fen-pv-gen-act-power "FenPVGenActivePower" "ess0/ActivePower" integer)
     (fen-pv-str1-act-power "FenPVStr1ActualPower" "charger10/ActualPower" integer)
     (fen-pv-str2-act-power "FenPVStr2ActualPower" "charger11/ActualPower" integer)
     (fen-grid-act-power "FenGridActualPower" "meter0/ActivePower" integer)
