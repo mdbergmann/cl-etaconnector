@@ -458,6 +458,9 @@ The 'qm' item represents the calculated value per day (or whatever) from the rea
   :persistence '(:id :influx
                  :frequency :every-change))
 
+;; on power shutdown, shelly starts with 0 total
+;; manually set total item to 0
+
 (defun calc-daily-solar-total ()
   (log:info "Calculating daily total solar...")
   (let ((total-day-item (get-item 'sol-power-total-day))
@@ -485,6 +488,9 @@ The 'qm' item represents the calculated value per day (or whatever) from the rea
 ;; Fenecon readers
 ;; ----------------------------
 
+;; Momentary
+;; ----------
+
 (defparameter *fenecon-items*
   '((fen-bat-load-state "FenBatLoadState" "ess0/Soc" integer)
     (fen-bat-charge-act-power "FenBatChargePower" "ess0/DcDischargePower" integer)
@@ -492,7 +498,8 @@ The 'qm' item represents the calculated value per day (or whatever) from the rea
     (fen-pv-str1-act-power "FenPVStr1ActualPower" "charger10/ActualPower" integer)
     (fen-pv-str2-act-power "FenPVStr2ActualPower" "charger11/ActualPower" integer)
     (fen-grid-act-power "FenGridActualPower" "meter0/ActivePower" integer)
-    (fen-consum-act-power "FenConsumptionActivePower" "_sum/ConsumptionActivePower" integer)))
+    (fen-consum-act-power "FenConsumptionActivePower" "_sum/ConsumptionActivePower" integer)
+    (fen-kacu-act-power "FenKacuActivePower" "pvInverter0/ActivePower" integer)))
 
 (dolist (i *fenecon-items*)
   (destructuring-bind (item-id item-label rest-path item-val-type) i
@@ -511,6 +518,52 @@ The 'qm' item represents the calculated value per day (or whatever) from the rea
                      :load-on-start t)
       :persistence '(:id :influx
                      :frequency :every-change))))
+
+;; per day
+;; ---------
+
+(defitem 'fen-pv-total-day "FenPVTotalDay" 'float
+  ;; in kWh/day
+  :initial-value 0.0
+  :persistence '(:id :default
+                 :frequency :every-change
+                 :load-on-start t)
+  :persistence '(:id :influx
+                 :frequency :every-change))
+
+(defitem 'fen-pv-total-last "FenPVTotalLast" 'integer
+  ;; in Wh
+  :initial-value 0
+  :persistence '(:id :default
+                 :frequency :every-change
+                 :load-on-start t)
+  :persistence '(:id :influx
+                 :frequency :every-change))  
+
+(defun calc-fen-pv-total-day (current-total last-total last-timestamp)
+  (let* ((val-diff (- current-total last-total))
+	 (time-diff (- (get-universal-time) last-timestamp))
+	 (result (/ val-diff (/ time-diff (* 60 60 24)))))
+    result))
+
+(defrule "Calc-Daily-PV-Total" ;in kW
+    :when-cron '(:minute 51 :hour 23)
+    :do (lambda (trigger)
+	  (declare (ignore trigger))
+	  (let* ((current-total-value
+		   (multiple-value-bind (stat val)
+		       (fen-if:read-item "_sum/ProductionActiveEnergy")
+		     (case stat
+		       (:ok val)
+		       (otherwise (error val)))))
+		 (last-total
+		   (item:get-item-stateq (get-item 'feb-pv-total-last)))
+		 (last-value (item:item-state-value last-total))
+		 (last-timestamp (item:item-state-timestamp last-total)))
+	    (item:set-value (get-item 'fen-pv-total-day)
+			    (calc-fen-pv-total-day current-total-value
+						   last-value
+						   last-timestamp)))))
 
 ;; ----------------------------
 ;; KNX items
