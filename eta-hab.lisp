@@ -555,15 +555,13 @@ The 'qm' item represents the calculated value per day (or whatever) from the rea
 		       (fen-if:read-item "_sum/ProductionActiveEnergy")
 		     (case stat
 		       (:ok val)
-		       (otherwise (error val)))))
-		 (last-total
-		   (item:get-item-stateq (get-item 'feb-pv-total-last)))
-		 (last-value (item:item-state-value last-total))
-		 (last-timestamp (item:item-state-timestamp last-total)))
-	    (item:set-value (get-item 'fen-pv-total-day)
-			    (calc-fen-pv-total-day current-total-value
-						   last-value
-						   last-timestamp)))))
+		       (otherwise (error val))))))
+	    (multiple-value-bind (last-value last-timestamp)
+		(get-item-valueq 'feb-pv-total-last)
+	      (item:set-value (get-item 'fen-pv-total-day)
+			      (calc-fen-pv-total-day current-total-value
+						     last-value
+						     last-timestamp))))))
 
 ;; ----------------------------
 ;; KNX items
