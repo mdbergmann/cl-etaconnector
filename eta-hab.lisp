@@ -257,7 +257,7 @@ The 'qm' item represents the calculated value per day (or whatever) from the rea
 
 (gen-reader-input-rule 'elec-reader-state
                        'elec-reader-state-input
-                       'elec-km-per-day
+                       'elec-kw-per-day
                        "Calculate elec kw/day from new input")
 
 ;; Garden reader
@@ -269,7 +269,7 @@ The 'qm' item represents the calculated value per day (or whatever) from the rea
     
 (gen-reader-input-rule 'elec-garden-reader-state
                        'elec-garden-reader-state-input
-                       'elec-garden-km-per-day
+                       'elec-garden-kw-per-day
                        "Calculate elec kw/day (garden) from new input")
 
 ;; Altes haus reader
@@ -281,7 +281,7 @@ The 'qm' item represents the calculated value per day (or whatever) from the rea
 
 (gen-reader-input-rule 'elec-oldh-reader-state
                        'elec-oldh-reader-state-input
-                       'elec-oldh-km-per-day
+                       'elec-oldh-kw-per-day
                        "Calculate elec kw/day (altes) from new input")
 
 ;; -----------------------------
@@ -434,10 +434,6 @@ The 'qm' item represents the calculated value per day (or whatever) from the rea
 (defitem 'sol-power-total-day "SolarPowerTotalDay" 'integer
   ;; in W/h
   :initial-value 0
-  (binding :push (lambda (value)
-                   (log:debug "Pushing value: ~a" value)
-                   (openhab:do-post "SolarPowerTotalDay" value))
-           :call-push-p t)
   :persistence '(:id :default
                  :frequency :every-change
                  :load-on-start t)
@@ -446,12 +442,7 @@ The 'qm' item represents the calculated value per day (or whatever) from the rea
 (defitem 'sol-power-mom "SolarPowerMom" 'integer
   (binding :initial-delay 5
            :delay 30
-           :pull (lambda () (eta-helper:solar-read))
-           :push (lambda (value)
-                   (log:debug "Pushing value: ~a" value)
-                   ;;(openhab:do-post "SolarPowerMom" value)
-		   )
-           :call-push-p t)
+           :pull (lambda () (eta-helper:solar-read)))
   :persistence '(:id :default
                  :frequency :every-change
                  :load-on-start t)
@@ -507,9 +498,7 @@ The 'qm' item represents the calculated value per day (or whatever) from the rea
       :initial-value 0
       (binding :pull (lambda () (eta-helper:fen-read-item rest-path))
                :push (lambda (value)
-                       (log:debug "Pushing value: ~a" value)
-                       ;;(openhab:do-post (second i) value)
-                       )
+                       (log:debug "Pushing value: ~a" value))
                :initial-delay 10
                :delay 30
                :call-push-p t)
@@ -522,46 +511,60 @@ The 'qm' item represents the calculated value per day (or whatever) from the rea
 ;; per day
 ;; ---------
 
-(defitem 'fen-pv-total-day "FenPVTotalDay" 'float
-  ;; in kWh/day
-  :initial-value 0.0
-  :persistence '(:id :default
-                 :frequency :every-change
-                 :load-on-start t)
-  :persistence '(:id :influx
-                 :frequency :every-change))
+(defmacro gen-item-fen-total-last (item-sym label type initial-value)
+  `(defitem ,item-sym ,label ,type
+     :initial-value ,initial-value
+     :persistence '(:id :default
+		    :frequency :every-change
+		    :load-on-start t)))
 
-(defitem 'fen-pv-total-last "FenPVTotalLast" 'integer
-  ;; in Wh
-  :initial-value 0
-  :persistence '(:id :default
-                 :frequency :every-change
-                 :load-on-start t)
-  :persistence '(:id :influx
-                 :frequency :every-change))  
+(defmacro gen-item-fen-total-day (item-sym label type initial-value)
+  `(defitem ,item-sym ,label ,type
+     :initial-value ,initial-value
+     :persistence '(:id :default
+		    :frequency :every-change
+		    :load-on-start t)
+     :persistence '(:id :influx
+		    :frequency :every-change)))
 
-(defun calc-fen-pv-total-day (current-total last-total last-timestamp)
+(gen-item-fen-total-day 'fen-pv-total-day "FenPVTotalDay" 'float 0.0) ;; in kWh/day
+(gen-item-fen-total-last 'fen-pv-total-last "FenPVTotalLast" 'integer 0) ;; in Wh
+
+(gen-item-fen-total-day 'fen-consum-total-day "FenConsumTotalDay" 'float 0.0)
+(gen-item-fen-total-last 'fen-consum-total-last "FenConsumTotalLast" 'integer 0)
+
+(defun calc-fen-total-day (current-total last-total last-timestamp)
   (let* ((val-diff (- current-total last-total))
 	 (time-diff (- (get-universal-time) last-timestamp))
-	 (result (/ val-diff (/ time-diff (* 60 60 24)))))
+	 (result (truncate (/ val-diff (/ time-diff (* 60 60 24))))))
     result))
 
 (defrule "Calc-Daily-PV-Total" ;in kW
     :when-cron '(:minute 51 :hour 23)
     :do (lambda (trigger)
 	  (declare (ignore trigger))
-	  (let* ((current-total-value
-		   (multiple-value-bind (stat val)
-		       (fen-if:read-item "_sum/ProductionActiveEnergy")
-		     (case stat
-		       (:ok val)
-		       (otherwise (error val))))))
-	    (multiple-value-bind (last-value last-timestamp)
-		(get-item-valueq 'feb-pv-total-last)
-	      (item:set-value (get-item 'fen-pv-total-day)
-			      (calc-fen-pv-total-day current-total-value
-						     last-value
-						     last-timestamp))))))
+	  (flet ((process-total (fen-rest fen-item-total-last fen-item-total-day)
+		   (let* ((current-total-value
+			    (multiple-value-bind (stat val)
+				(fen-if:read-item fen-rest)
+			      (case stat
+				(:ok val)
+				(otherwise (error val))))))
+		     (multiple-value-bind (last-value last-timestamp)
+			 (get-item-valueq fen-item-total-last)
+		       (set-item-value fen-item-total-day
+				       (calc-fen-total-day current-total-value
+							   last-value
+							   last-timestamp))
+		       (set-item-value fen-item-total-last current-total-value)))))
+	    (ignore-errors
+	     (process-total "_sum/ProductionActiveEnergy"
+			    'fen-pv-total-last
+			    'fen-pv-total-day))
+	    (ignore-errors
+	     (process-total "_sum/ConsumptionActiveEnergy"
+			    'fen-consum-total-last
+			    'fen-consum-total-day)))))
 
 ;; ----------------------------
 ;; KNX items
