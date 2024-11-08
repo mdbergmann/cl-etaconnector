@@ -187,8 +187,8 @@ The 'qm' item represents the calculated value per day (or whatever) from the rea
 	   :persistence '(:id :default
                       :frequency :every-change
                       :load-on-start t)
-	   :persistence '(:id influx
-                      :frequence :every-change)))
+	   :persistence '(:id :influx
+			  :frequence :every-change)))
        (destructuring-bind (,item-name . ,item-label)
            ,reader-in-pair
          (defitem ,item-name ,item-label 'float
@@ -224,7 +224,7 @@ The 'qm' item represents the calculated value per day (or whatever) from the rea
     (let* ((diff-ts (- input-timestamp reader-timestamp))
 	   (diff-days (/ diff-ts (* 60 60 24))))
       (values 
-       (/ (- input-value reader-value) diff-days)
+       (float (/ (- input-value reader-value) diff-days))
        input-value))))
 
 (defmacro gen-reader-input-rule (reader-item-sym
