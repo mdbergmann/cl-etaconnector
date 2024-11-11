@@ -163,12 +163,10 @@
 ;; Strom
 ;; ---------------------
 
-(defmacro gen-reader-item-tripple (reader-pair
-                                   reader-in-pair
-                                   qm-pair)
+(defmacro gen-reader-item-double (reader-pair
+				  qm-pair)
   "Macro that generates 3 items for a reader, a reader-in and a qm item.
 The 'reader' (or 'meter') item represents the current value of the currency, water, whatever reader/meter.
-The 'reader-in' item represents the last value that was read from the reader/meter and is used to trigger the calculation of the qm item.
 The 'qm' item represents the calculated value per day (or whatever) from the reader/meter."
   (let ((item-name (gensym))
 	(item-label (gensym))
@@ -190,10 +188,6 @@ The 'qm' item represents the calculated value per day (or whatever) from the rea
 	   :persistence '(:id :influx
 			  :frequence :every-change)))
        (destructuring-bind (,item-name . ,item-label)
-           ,reader-in-pair
-         (defitem ,item-name ,item-label 'float
-           :initial-value 0))
-       (destructuring-bind (,item-name . ,item-label)
            ,qm-pair
          (defitem ,item-name ,item-label 'float
            :initial-value 0.0
@@ -214,213 +208,161 @@ The 'qm' item represents the calculated value per day (or whatever) from the rea
 	 (diff (- uni2 uni1)))
     (round (/ diff (* 60 60 24)))))    
 
-(defun calc-elec-kmperday (input-item reader-item)
-  (let* ((input-state (item:get-item-stateq input-item))
-	 (input-value (item:item-state-value input-state))
-	 (input-timestamp (item:item-state-timestamp input-state))
-	 (reader-state (item:get-item-stateq reader-item))
-	 (reader-value (item:item-state-value reader-state))
-	 (reader-timestamp (item:item-state-timestamp reader-state)))
-    (let* ((diff-ts (- input-timestamp reader-timestamp))
-	   (diff-days (/ diff-ts (* 60 60 24))))
-      (values 
-       (float (/ (- input-value reader-value) diff-days))
-       input-value))))
+(defun calc-reader-perday (new-reader-values old-reader-values)
+  (destructuring-bind (input-value input-timestamp) new-reader-values
+    (destructuring-bind (reader-value reader-timestamp) old-reader-values
+      (let* ((diff-ts (- input-timestamp reader-timestamp))
+	     (diff-days (/ diff-ts (* 60 60 24))))
+	(float (/ (- input-value reader-value) diff-days))))))
 
-(defmacro gen-reader-input-rule (reader-item-sym
-                                 input-item-sym
-                                 per-day-item-sym
-                                 label)
-  (let ((reader-item (gensym))
-        (input-item (gensym))
-        (per-day-item (gensym))
-        (new-km-per-day (gensym))
-        (input-value (gensym)))
-    `(defrule ,label
-         :when-item-change ,input-item-sym
-         :do (lambda (trigger)
-               (declare (ignore trigger))
-               (let ((,reader-item (get-item ,reader-item-sym))
-                     (,input-item (get-item ,input-item-sym))
-                     (,per-day-item (get-item ,per-day-item-sym)))
-                 (multiple-value-bind (,new-km-per-day ,input-value)
-                     (calc-elec-kmperday ,input-item ,reader-item)
-                   (item:set-value ,per-day-item ,new-km-per-day)
-                   (item:set-value ,reader-item ,input-value)))))))
+(defun submit-mainh-reader-value (reader-value oldh-reader-value)
+  (let ((new-qm-per-day
+	  (calc-reader-perday
+	   (list (- reader-value oldh-reader-value)
+		 (get-universal-time))
+	   (multiple-value-list
+	    (get-item-valueq 'elec-reader-state)))))
+    (set-item-value 'elec-kw-per-day new-qm-per-day)
+    (set-item-value 'elec-reader-state reader-value)))
+
+(defun submit-oldh-reader-value (reader-value)
+  (let ((new-qm-per-day
+	  (calc-reader-perday
+	   (list reader-value
+		 (get-universal-time))
+	   (multiple-value-list
+	    (get-item-valueq 'elec-oldh-reader-state)))))
+    (set-item-value 'elec-oldh-kw-per-day new-qm-per-day)
+    (set-item-value 'elec-oldh-reader-state reader-value)))
+
+(defun submit-garden-reader-value (reader-value)
+  (let ((new-qm-per-day
+	  (calc-reader-perday
+	   (list reader-value
+		 (get-universal-time))
+	   (multiple-value-list
+	    (get-item-valueq 'elec-garden-reader-state)))))
+    (set-item-value 'elec-garden-kw-per-day new-qm-per-day)
+    (set-item-value 'elec-garden-reader-state reader-value)))
 
 ;; Master reader
 ;; -------------
 
-(gen-reader-item-tripple '(elec-reader-state . "ElecReaderState")
-                         '(elec-reader-state-input . "ElecReaderStateInput")
-                         '(elec-kw-per-day . "ElecKWattsPerDay"))
-
-(gen-reader-input-rule 'elec-reader-state
-                       'elec-reader-state-input
-                       'elec-kw-per-day
-                       "Calculate elec kw/day from new input")
+(gen-reader-item-double '(elec-reader-state . "ElecReaderState")
+			'(elec-kw-per-day . "ElecKWattsPerDay"))
 
 ;; Garden reader
 ;; -------------
 
-(gen-reader-item-tripple '(elec-garden-reader-state . "ElecGarReaderState")
-                         '(elec-garden-reader-state-input . "ElecGarReaderStateInput")
-                         '(elec-garden-kw-per-day . "ElecGarKWattsPerDay"))
-    
-(gen-reader-input-rule 'elec-garden-reader-state
-                       'elec-garden-reader-state-input
-                       'elec-garden-kw-per-day
-                       "Calculate elec kw/day (garden) from new input")
+(gen-reader-item-double '(elec-garden-reader-state . "ElecGarReaderState")
+			'(elec-garden-kw-per-day . "ElecGarKWattsPerDay"))
 
 ;; Altes haus reader
 ;; -------------
 
-(gen-reader-item-tripple '(elec-oldh-reader-state . "ElecOldReaderState")
-                         '(elec-oldh-reader-state-input . "ElecOldReaderStateInput")
-                         '(elec-oldh-kw-per-day . "ElecOldKWattsPerDay"))
-
-(gen-reader-input-rule 'elec-oldh-reader-state
-                       'elec-oldh-reader-state-input
-                       'elec-oldh-kw-per-day
-                       "Calculate elec kw/day (altes) from new input")
+(gen-reader-item-double '(elec-oldh-reader-state . "ElecOldReaderState")
+			'(elec-oldh-kw-per-day . "ElecOldKWattsPerDay"))
 
 ;; -----------------------------
 ;; Water
 ;; -----------------------------
 
-(defun calc-water-qmperday (input-item reader-item)
-  (let* ((input-state (item:get-item-stateq input-item))
-	 (input-value (item:item-state-value input-state))
-	 (input-timestamp (item:item-state-timestamp input-state))
-	 (reader-state (item:get-item-stateq reader-item))
-	 (reader-value (item:item-state-value reader-state))
-	 (reader-timestamp (item:item-state-timestamp reader-state)))
-    (let* ((diff-ts (- input-timestamp reader-timestamp))
-	   (diff-days (/ diff-ts (* 60 60 24))))
-      (values 
-       (/ (- input-value reader-value) diff-days)
-       input-value))))
-
-(defmacro gen-water-qm-rule ((reader-item
-                              reader-in-item
-                              qm-item
-                              label))
-  (let ((rule-name (gensym))
-        (reader-item-instance (gensym))
-        (reader-in-item-instance (gensym))
-        (qm-item-instance (gensym))
-        (new-qm-per-day (gensym))
-        (input-value (gensym)))
-    (setf rule-name (format nil "Calculate water (~a) qm/day from new input" label))
-    `(defrule ,rule-name
-       :when-item-change ,reader-in-item
-       :do (lambda (trigger)
-	     (declare (ignore trigger))
-	     (log:info "Calculate new water (~a) qm/day..." ,label)
-	     (let ((,reader-item-instance (get-item ,reader-item))
-		   (,reader-in-item-instance (get-item ,reader-in-item))
-		   (,qm-item-instance (get-item ,qm-item)))
-	       (multiple-value-bind (,new-qm-per-day ,input-value)
-		   (calc-water-qmperday
-		    ,reader-in-item-instance
-		    ,reader-item-instance)
-		 (item:set-value ,qm-item-instance ,new-qm-per-day)
-		 (item:set-value ,reader-item-instance ,input-value)))))))
-
 ;; Main reader
 ;; -----------
 
-(gen-reader-item-tripple '(water-reader-state . "WaterReaderState")
-			'(water-reader-state-input . "WaterReaderStateInput")
+(gen-reader-item-double '(water-reader-state . "WaterReaderState")
 			'(water-qm-per-day . "WaterQMPerDay"))
 
-(gen-water-qm-rule ('water-reader-state
-		    'water-reader-state-input
-		    'water-qm-per-day
-		    "master"))
+(defun submit-main-water-reader-value (reader-value)
+  (let ((new-qm-per-day
+	  (calc-reader-perday
+	   (list reader-value
+		 (get-universal-time))
+	   (multiple-value-list
+	    (get-item-valueq 'water-reader-state)))))
+    (set-item-value 'water-qm-per-day new-qm-per-day)
+    (set-item-value 'water-reader-state reader-value)))
 
 ;; Garden reader
 ;; -------------
 
-(gen-reader-item-tripple '(water-garden-reader-state . "GardenWaterReaderState")
-			'(water-garden-reader-state-input . "GardenWaterReaderStateInput")
+(gen-reader-item-double '(water-garden-reader-state . "GardenWaterReaderState")
 			'(water-garden-qm-per-day . "GardenGardenQMPerDay"))
 
-(gen-water-qm-rule ('water-garden-reader-state
-		    'water-garden-reader-state-input
-		    'water-garden-qm-per-day
-		    "garden"))
+(defun submit-garden-water-reader-value (reader-value)
+  (let ((new-qm-per-day
+	  (calc-reader-perday
+	   (list reader-value
+		 (get-universal-time))
+	   (multiple-value-list
+	    (get-item-valueq 'water-garden-reader-state)))))
+    (set-item-value 'water-garden-qm-per-day new-qm-per-day)
+    (set-item-value 'water-garden-reader-state reader-value)))
 
 ;; Fresh-in reader
 ;; -----------
 
-(gen-reader-item-tripple '(water-fresh-reader-state . "FreshInWaterReaderState")
-			'(water-fresh-reader-state-input . "FreshInWaterReaderStateInput")
+(gen-reader-item-double '(water-fresh-reader-state . "FreshInWaterReaderState")
 			'(water-fresh-qm-per-day . "FreshInWaterQMPerDay"))
 
-(gen-water-qm-rule ('water-fresh-reader-state
-		    'water-fresh-reader-state-input
-		    'water-fresh-qm-per-day
-		    "fresh"))
+(defun submit-fresh-water-reader-value (reader-value)
+  (let ((new-qm-per-day
+	  (calc-reader-perday
+	   (list reader-value
+		 (get-universal-time))
+	   (multiple-value-list
+	    (get-item-valueq 'water-fresh-reader-state)))))
+    (set-item-value 'water-fresh-qm-per-day new-qm-per-day)
+    (set-item-value 'water-fresh-reader-state reader-value)))
 
 ;; zist-in reader
 ;; --------------
 
-(gen-reader-item-tripple '(water-zist-reader-state . "ZistInWaterReaderState")
-			'(water-zist-reader-state-input . "ZistInWaterReaderStateInput")
+(gen-reader-item-double '(water-zist-reader-state . "ZistInWaterReaderState")
 			'(water-zist-qm-per-day . "ZistInWaterQMPerDay"))
 
-(gen-water-qm-rule ('water-zist-reader-state
-		    'water-zist-reader-state-input
-		    'water-zist-qm-per-day
-		    "zist"))
+(defun submit-zist-water-reader-value (reader-value)
+  (let ((new-qm-per-day
+	  (calc-reader-perday
+	   (list reader-value
+		 (get-universal-time))
+	   (multiple-value-list
+	    (get-item-valueq 'water-zist-reader-state)))))
+    (set-item-value 'water-zist-qm-per-day new-qm-per-day)
+    (set-item-value 'water-zist-reader-state reader-value)))
 
 ;; Garden-Gunda
 ;; ------------
 
-(gen-reader-item-tripple '(water-alt-garden-reader-state . nil)
-			'(water-alt-garden-reader-state-input . nil)
+(gen-reader-item-double '(water-alt-garden-reader-state . nil)
 			'(water-alt-garden-qm-per-day . nil))
 
-(gen-water-qm-rule ('water-alt-garden-reader-state
-		    'water-alt-garden-reader-state-input
-		    'water-alt-garden-qm-per-day
-		    "alt-garden"))
+(defun submit-alt-water-reader-value (reader-value)
+  (let ((new-qm-per-day
+	  (calc-reader-perday
+	   (list reader-value
+		 (get-universal-time))
+	   (multiple-value-list
+	    (get-item-valueq 'water-alt-reader-state)))))
+    (set-item-value 'water-alt-qm-per-day new-qm-per-day)
+    (set-item-value 'water-alt-reader-state reader-value)))
 
 ;; ---------------------
 ;; Chips
 ;; ---------------------
 
-(defun calc-chips-qm3perday (input-item reader-item)
-  (let* ((input-state (item:get-item-stateq input-item))
-	 (input-value (item:item-state-value input-state))
-	 (input-timestamp (item:item-state-timestamp input-state))
-	 (reader-state (item:get-item-stateq reader-item))
-	 (reader-timestamp (item:item-state-timestamp reader-state)))
-    (let* ((diff-ts (- input-timestamp reader-timestamp))
-	   (diff-days (/ diff-ts (* 60 60 24))))
-      (values 
-       (/ input-value diff-days)
-       input-value))))
+(gen-reader-item-double '(chips-reload-volume . "ChipsReloadVolume")
+			'(chips-qm3-per-day . "ChipsPerDay"))
 
-(gen-reader-item-tripple '(chips-reload-volume . "ChipsReloadVolume")
-			 '(chips-reload-volume-input . "ChipsReloadVolumeInput")
-			 '(chips-qm3-per-day . "ChipsPerDay"))
-
-(defrule "ChipsReloadPerDayRule"
-  :when-item-change 'chips-reload-volume-input
-  :do (lambda (trigger)
-	(declare (ignore trigger))
-	(log:info "Calculate new chips qm3/day...")
-	(let ((chips-item-instance (get-item 'chips-reload-volume))
-	      (input-item-instance (get-item 'chips-reload-volume-input))
-	      (qm3-item-instance (get-item 'chips-qm3-per-day)))
-	  (multiple-value-bind (new-qm3-per-day input-value)
-	      (calc-chips-qm3perday
-	       input-item-instance
-	       chips-item-instance)
-	    (item:set-value qm3-item-instance new-qm3-per-day)
-	    (item:set-value chips-item-instance input-value)))))
+(defun submit-chips-value (reader-value)
+  (let ((new-chips-per-day
+	  (calc-reader-perday
+	   (list reader-value
+		 (get-universal-time))
+	   (multiple-value-list
+	    (get-item-valueq 'chips-reload-volume)))))
+    (set-item-value 'chips-qm3-per-day new-chips-per-day)
+    (set-item-value 'chips-reload-volume reader-value)))
 
 ;; ---------------------
 ;; Solar
