@@ -478,35 +478,41 @@ The 'qm' item represents the calculated value per day (or whatever) from the rea
 (defun calc-fen-total-day (current-total last-total last-timestamp)
   (let* ((val-diff (- current-total last-total))
 	 (time-diff (- (get-universal-time) last-timestamp))
-	 (result (truncate (/ val-diff (/ time-diff (* 60 60 24))))))
+	 (days-diff (/ time-diff (* 60 60 24)))
+	 (result (truncate (/ val-diff days-diff))))
     result))
+
+(defun calc-daily-pv-total ()
+  (log:info "")
+  (flet ((process-total (fen-rest fen-item-total-last fen-item-total-day)
+	   (let* ((current-total-value
+		    (multiple-value-bind (stat val)
+			(fen-if:read-item fen-rest)
+		      (case stat
+			(:ok val)
+			(otherwise (error val))))))
+	     (multiple-value-bind (last-value last-timestamp)
+		 (get-item-valueq fen-item-total-last)
+	       (set-item-value fen-item-total-day
+			       (calc-fen-total-day current-total-value
+						   last-value
+						   last-timestamp))
+	       (set-item-value fen-item-total-last current-total-value)))))
+    (ignore-errors
+     (process-total "_sum/ProductionActiveEnergy"
+		    'fen-pv-total-last
+		    'fen-pv-total-day))
+    (ignore-errors
+     (process-total "_sum/ConsumptionActiveEnergy"
+		    'fen-consum-total-last
+		    'fen-consum-total-day))))
 
 (defrule "Calc-Daily-PV-Total" ;in kW
     :when-cron '(:minute 51 :hour 23)
     :do (lambda (trigger)
 	  (declare (ignore trigger))
-	  (flet ((process-total (fen-rest fen-item-total-last fen-item-total-day)
-		   (let* ((current-total-value
-			    (multiple-value-bind (stat val)
-				(fen-if:read-item fen-rest)
-			      (case stat
-				(:ok val)
-				(otherwise (error val))))))
-		     (multiple-value-bind (last-value last-timestamp)
-			 (get-item-valueq fen-item-total-last)
-		       (set-item-value fen-item-total-day
-				       (calc-fen-total-day current-total-value
-							   last-value
-							   last-timestamp))
-		       (set-item-value fen-item-total-last current-total-value)))))
-	    (ignore-errors
-	     (process-total "_sum/ProductionActiveEnergy"
-			    'fen-pv-total-last
-			    'fen-pv-total-day))
-	    (ignore-errors
-	     (process-total "_sum/ConsumptionActiveEnergy"
-			    'fen-consum-total-last
-			    'fen-consum-total-day)))))
+	  (log:info "Running Calc-Daily-PV-Total")
+	  (calc-daily-pv-total)))
 
 ;; ----------------------------
 ;; KNX items
