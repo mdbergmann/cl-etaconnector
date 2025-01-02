@@ -164,7 +164,7 @@
 ;; ---------------------
 
 (defmacro gen-reader-item-double (reader-pair
-				                  qm-pair)
+				  qm-pair)
   "Macro that generates 3 items for a reader, a reader-in and a qm item.
 The 'reader' (or 'meter') item represents the current value of the currency, water, whatever reader/meter.
 The 'qm' item represents the calculated value per day (or whatever) from the reader/meter."
@@ -215,11 +215,11 @@ The 'qm' item represents the calculated value per day (or whatever) from the rea
 	         (diff-days (/ diff-ts (* 60 60 24))))
 	    (float (/ (- input-value reader-value) diff-days))))))
 
-(defun submit-mainh-reader-value (reader-value oldh-reader-value)
+(defun submit-mainh-reader-value (reader-value)
   (let ((new-qm-per-day
 	      (calc-reader-perday
-	       (list (- reader-value oldh-reader-value)
-		         (get-universal-time))
+	       (list reader-value
+		     (get-universal-time))
 	       (multiple-value-list
 	        (get-item-valueq 'elec-reader-state)))))
     (set-item-value 'elec-kw-per-day new-qm-per-day)
@@ -229,12 +229,12 @@ The 'qm' item represents the calculated value per day (or whatever) from the rea
   (let ((new-qm-per-day
 	      (calc-reader-perday
 	       (list reader-value
-		         (get-universal-time))
+		     (get-universal-time))
 	       (multiple-value-list
 	        (get-item-valueq 'elec-oldh-reader-state)))))
     (set-item-value 'elec-oldh-kw-per-day new-qm-per-day)
     (set-item-value 'elec-oldh-reader-state reader-value)))
-
+	
 (defun submit-garden-reader-value (reader-value)
   (let ((new-qm-per-day
 	      (calc-reader-perday
@@ -249,19 +249,19 @@ The 'qm' item represents the calculated value per day (or whatever) from the rea
 ;; -------------
 
 (gen-reader-item-double '(elec-reader-state . "ElecReaderState")
-			            '(elec-kw-per-day . "ElecKWattsPerDay"))
+			'(elec-kw-per-day . "ElecKWattsPerDay"))
 
 ;; Garden reader
 ;; -------------
 
 (gen-reader-item-double '(elec-garden-reader-state . "ElecGarReaderState")
-			            '(elec-garden-kw-per-day . "ElecGarKWattsPerDay"))
+			'(elec-garden-kw-per-day . "ElecGarKWattsPerDay"))
 
 ;; Altes haus reader
 ;; -------------
 
 (gen-reader-item-double '(elec-oldh-reader-state . "ElecOldReaderState")
-			            '(elec-oldh-kw-per-day . "ElecOldKWattsPerDay"))
+			'(elec-oldh-kw-per-day . "ElecOldKWattsPerDay"))
 
 ;; -----------------------------
 ;; Water
@@ -335,7 +335,7 @@ The 'qm' item represents the calculated value per day (or whatever) from the rea
 ;; ------------
 
 (gen-reader-item-double '(water-alt-garden-reader-state . nil)
-			            '(water-alt-garden-qm-per-day . nil))
+			'(water-alt-garden-qm-per-day . nil))
 
 (defun submit-alt-water-reader-value (reader-value)
   (let ((new-qm-per-day
@@ -343,9 +343,9 @@ The 'qm' item represents the calculated value per day (or whatever) from the rea
 	       (list reader-value
 		         (get-universal-time))
 	       (multiple-value-list
-	        (get-item-valueq 'water-alt-reader-state)))))
-    (set-item-value 'water-alt-qm-per-day new-qm-per-day)
-    (set-item-value 'water-alt-reader-state reader-value)))
+	        (get-item-valueq 'water-alt-garden-reader-state)))))
+    (set-item-value 'water-alt-garden-qm-per-day new-qm-per-day)
+    (set-item-value 'water-alt-garden-reader-state reader-value)))
 
 ;; ---------------------
 ;; Chips
@@ -376,6 +376,10 @@ The 'qm' item represents the calculated value per day (or whatever) from the rea
 (defitem 'sol-power-total-day "SolarPowerTotalDay" 'integer
   ;; in W/h
   :initial-value 0
+  (binding :push (lambda (value)
+                   (log:debug "Pushing (SolarPowerTotalDay) value: ~a" value)
+                   (openhab:do-post "SolarPowerTotalDay" value))
+           :call-push-p t)
   :persistence '(:id :default
                  :frequency :every-change
                  :load-on-start t)
@@ -475,6 +479,9 @@ The 'qm' item represents the calculated value per day (or whatever) from the rea
 (gen-item-fen-total-day 'fen-consum-total-day "FenConsumTotalDay" 'float 0.0)
 (gen-item-fen-total-last 'fen-consum-total-last "FenConsumTotalLast" 'integer 0)
 
+(gen-item-fen-total-day 'fen-grid-total-day "FenGridTotalDay" 'float 0.0)
+(gen-item-fen-total-last 'fen-grid-total-last "FenGridTotalLast" 'integer 0)
+
 (defun calc-fen-total-day (current-total last-total last-timestamp)
   (let* ((val-diff (- current-total last-total))
 	 (time-diff (- (get-universal-time) last-timestamp))
@@ -505,7 +512,11 @@ The 'qm' item represents the calculated value per day (or whatever) from the rea
     (ignore-errors
      (process-total "_sum/ConsumptionActiveEnergy"
 		    'fen-consum-total-last
-		    'fen-consum-total-day))))
+		    'fen-consum-total-day))
+    (ignore-errors
+     (process-total "_sum/GridBuyActiveEnergy"
+		    'fen-grid-total-last
+		    'fen-grid-total-day))))
 
 (defrule "Calc-Daily-PV-Total" ;in kW
     :when-cron '(:minute 51 :hour 23)
