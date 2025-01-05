@@ -357,8 +357,8 @@ The 'qm' item represents the calculated value per day (or whatever) from the rea
 (defun submit-chips-value (reader-value)
   (let ((new-chips-per-day
 	      (calc-reader-perday
-	       (list reader-value
-		         (get-universal-time))
+	       (list 0.0
+		     (get-universal-time))
 	       (multiple-value-list
 	        (get-item-valueq 'chips-reload-volume)))))
     (set-item-value 'chips-qm3-per-day new-chips-per-day)
