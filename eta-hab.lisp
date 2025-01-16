@@ -482,6 +482,9 @@ The 'qm' item represents the calculated value per day (or whatever) from the rea
 (gen-item-fen-total-day 'fen-grid-total-day "FenGridTotalDay" 'float 0.0)
 (gen-item-fen-total-last 'fen-grid-total-last "FenGridTotalLast" 'integer 0)
 
+(gen-item-fen-total-day 'fen-grid-out-total-day "FenGridOutTotalDay" 'float 0.0)
+(gen-item-fen-total-last 'fen-grid-out-total-last "FenGridOutTotalLast" 'integer 0)
+
 (defun calc-fen-total-day (current-total last-total last-timestamp)
   (let* ((val-diff (- current-total last-total))
 	 (time-diff (- (get-universal-time) last-timestamp))
@@ -516,7 +519,12 @@ The 'qm' item represents the calculated value per day (or whatever) from the rea
     (ignore-errors
      (process-total "_sum/GridBuyActiveEnergy"
 		    'fen-grid-total-last
-		    'fen-grid-total-day))))
+		    'fen-grid-total-day))
+    (ignore-errors
+     (process-total "_sum/GridSellActiveEnergy"
+		    'fen-grid-out-total-last
+		    'fen-grid-out-total-day))
+    ))
 
 (defrule "Calc-Daily-PV-Total" ;in kW
     :when-cron '(:minute 51 :hour 23)
