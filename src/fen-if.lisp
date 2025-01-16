@@ -39,4 +39,6 @@ CL-USER> (progn
 "{\"address\":\"charger11/ActualPower\",\"type\":\"INTEGER\",\"accessMode\":\"RO\",\"text\":\"\",\"unit\":\"W\",\"value\":0}"
 "{\"address\":\"charger11/ActualEnergy\",\"type\":\"LONG\",\"accessMode\":\"RO\",\"text\":\"\",\"unit\":\"Wh_Σ\",\"value\":0}"
 "{\"address\":\"meter0/ActivePower\",\"type\":\"INTEGER\",\"accessMode\":\"RO\",\"text\":\"\",\"unit\":\"W\",\"value\":-14}"
+{\"address\":\"_sum/GridBuyActiveEnergy\",\"type\":\"LONG\",\"accessMode\":\"RO\",\"text\":\"\",\"unit\":\"Wh_Σ\",\"value\":2105230}
+{\"address\":\"_sum/GridSellActiveEnergy\",\"type\":\"LONG\",\"accessMode\":\"RO\",\"text\":\"\",\"unit\":\"Wh_Σ\",\"value\":33182}
 |#
