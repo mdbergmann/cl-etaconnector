@@ -545,6 +545,18 @@ The 'qm' item represents the calculated value per day (or whatever) from the rea
                :dpt "1.001"
                :call-push-p t))
 
+;; Temperatures
+
+(defitem 'temp-outside
+  "Temperatur aussen" 'float
+  (knx-binding :ga "3/2/0"
+	       :dpt "9.001"
+	       :call-push-p t)
+  :persistence '(:id :default
+		 :frequency :every-change
+		 :load-on-start t)
+  :persistence '(:id :influx
+		 :frequency :every-30m))
 
 #|
 
