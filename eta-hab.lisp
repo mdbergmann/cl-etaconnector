@@ -127,10 +127,12 @@
   :when-cron '(:minute :every)
   :do (lambda (trigger)
         (declare (ignore trigger))
-        (let ((monitors (eta-helper:eta-read-monitors)))
-          (apply-monitors monitors
-                          (lambda (item value)
-                            (item:set-value item value))))))
+	(tasks:task-start
+	 (lambda ()
+	   (let ((monitors (eta-helper:eta-read-monitors)))
+	     (apply-monitors monitors
+			     (lambda (item value)
+			       (item:set-value item value))))))))
 
 (defun calc-daily-eta-op-hours-weekly ()
   (log:info "Trigger calc daily eta op hours")
