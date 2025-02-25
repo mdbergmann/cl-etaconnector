@@ -247,6 +247,16 @@ The 'qm' item represents the calculated value per day (or whatever) from the rea
     (set-item-value 'elec-garden-kw-per-day new-qm-per-day)
     (set-item-value 'elec-garden-reader-state reader-value)))
 
+(defun submit-carloader-reader-value (reader-value)
+  (let ((new-kw-per-day
+	      (calc-reader-perday
+	       (list reader-value
+		         (get-universal-time))
+	       (multiple-value-list
+	        (get-item-valueq 'elec-carloader-reader-state)))))
+    (set-item-value 'elec-carloader-kw-per-day new-kw-per-day)
+    (set-item-value 'elec-carloader-reader-state reader-value)))
+
 ;; Master reader
 ;; -------------
 
@@ -264,6 +274,12 @@ The 'qm' item represents the calculated value per day (or whatever) from the rea
 
 (gen-reader-item-double '(elec-oldh-reader-state . "ElecOldReaderState")
 			'(elec-oldh-kw-per-day . "ElecOldKWattsPerDay"))
+
+;; Car loader reader
+;; -------------
+
+(gen-reader-item-double '(elec-carloader-reader-state . "ElecCarLoaderReaderState")
+			'(elec-carloader-kw-per-day . "ElecCarLoaderKWattsPerDay"))
 
 ;; -----------------------------
 ;; Water
