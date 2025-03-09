@@ -117,10 +117,14 @@
     (let* ((monitor-name (car m))
            (monitor-value (cdr m))
            (item-id (find monitor-name *eta-raw-items* :key #'second :test #'equal))
-           (item (get-item (car item-id))))
+           (item (get-item (car item-id)))
+	   (proc-m t))
       (log:debug "Monitor: ~a, value: ~a" monitor-name monitor-value)
       (log:debug "Item: ~a, value: ~a" item-id item)
-      (when item
+      (when (and (equal "EtaTempAussen" monitor-name)
+		 (< monitor-value -50.0)) ;; sensor is flacky sometimes
+	(setf proc-m nil))
+      (when (and item proc-m)
         (funcall apply-fun item monitor-value)))))
 
 (defrule "Read-ETA-serial"
