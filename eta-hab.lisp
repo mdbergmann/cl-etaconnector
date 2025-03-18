@@ -39,6 +39,14 @@
        :token "A005mInE0uPMoW6l-kHmsxX1l8XC14Uw0UyAjV20GDq7qev0M1-kaGy77M7JH7wsIrc3-rTm1hRoHZ735Q4tHw=="
        :org "mabe"
        :bucket "hab")))
+(defpersistence :influx-1m
+    (lambda (id)
+      (make-influx-persistence
+       id
+       :base-url "http://picellar:8086"
+       :token "A005mInE0uPMoW6l-kHmsxX1l8XC14Uw0UyAjV20GDq7qev0M1-kaGy77M7JH7wsIrc3-rTm1hRoHZ735Q4tHw=="
+       :org "mabe"
+       :bucket "hab-1month")))
 
 (defrule "Init externals"
   :when-cron '(:boot-only t)  ; beware all other cron keys are at :every
