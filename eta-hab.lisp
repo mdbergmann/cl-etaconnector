@@ -63,20 +63,61 @@
 ;; ---------------------
 ;; Zisterne
 ;; ---------------------
+(defparameter *sensor-data*
+  '((7.8 30)
+    (10.1 61)
+    (10.6 67)
+    (11.0 73.5)
+    (11.1 74)
+    (11.6 81)
+    (12.3 89)
+    (12.6 94)
+    (13.1 100)))
+
+(defun interpolate (x1 y1 x2 y2 x)
+  "Linear interpolation for point x between (x1, y1) and (x2, y2)."
+  (+ y1 (* (/ (- x x1) (- x2 x1)) (- y2 y1))))
+
+(defun ma-to-cm (ma)
+  "Interpolates the water level in cm for a given sensor value in mA."
+  (let ((pairs *sensor-data*))
+    (loop :for (x1 y1) :in pairs
+          :for rest = (cdr pairs) :then (cdr rest)
+          :while rest
+          :for (x2 y2) = (car rest)
+          :when (and (<= x1 ma) (<= ma x2))
+            return (interpolate x1 y1 x2 y2 ma)
+          :finally (error "mA value ~A is out of bounds." ma))))
+
 (defitem 'zist-sensor-curr "ZistSensorCurrency" 'float
   (binding :initial-delay 5
            :delay (* 60 10) ;; 10 minutes
            :pull (lambda () (eta-helper:ina-read))
            :push (lambda (value)
                    (log:debug "Pushing value: ~a" value)
-                   (openhab:do-post "ZistSensorCurrency" value))
+                   (openhab:do-post "ZistSensorCurrency" value)
+		   ;; calculate fillgrade in cm and set on item
+		   (set-item-value 'zist-fillgrade-cm
+				   (ma-to-cm value)))
            :call-push-p t)
   :persistence '(:id :default
                  :frequency :every-change
                  :load-on-start t)
-  :persistence '(:id :influx
+  :persistence '(:id :influx-1m
                  :frequency :every-change))
-        
+
+(defitem 'zist-fillgrade-cm "ZistFillgrade" 'float
+  :initial-value 0.0
+  (binding :push (lambda (value)
+		   (log:debug "Pushing ZistFillgrade value: ~a" value)
+		   (openhab:do-post "ZistFillgrade" value))
+	   :call-push-p t)
+  :persistence '(:id :default
+                 :frequency :every-change
+                 :load-on-start t)
+  :persistence '(:id :influx-1m
+                 :frequency :every-change))
+
 ;; ---------------------
 ;; Eta
 ;; ---------------------
@@ -88,7 +129,7 @@
     (eta-temp-aussen "EtaTempAussen" float)
     (eta-temp-boiler "EtaBoiler" float)
     (eta-temp-boiler-unten "EtaBoilerUnten" float)
-    ;;(eta-temp-boiler-untsolar "EtaBoilerUntSolar" float)
+    (eta-temp-boiler-untsolar "EtaBoilerUntSolar" float)
     (eta-temp-kessel "EtaKessel" float)
     (eta-temp-kessel-rueck "EtaKesselRuecklauf" float)
     ;;(eta-temp-kollektor "EtaKollektor" float)
@@ -382,7 +423,7 @@ The 'qm' item represents the calculated value per day (or whatever) from the rea
 ;; ---------------------
 
 (gen-reader-item-double '(chips-reload-volume . "ChipsReloadVolume")
-			            '(chips-qm3-per-day . "ChipsPerDay"))
+			'(chips-qm3-per-day . "ChipsPerDay"))
 
 (defun submit-chips-value (reader-value)
   (let ((new-chips-per-day
@@ -587,6 +628,10 @@ The 'qm' item represents the calculated value per day (or whatever) from the rea
 		 :load-on-start t)
   :persistence '(:id :influx
 		 :frequency :every-30m))
+
+;; Room temperatures
+
+
 
 #|
 
