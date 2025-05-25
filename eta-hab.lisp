@@ -63,31 +63,14 @@
 ;; ---------------------
 ;; Zisterne
 ;; ---------------------
-(defparameter *sensor-data*
-  '((7.8 30)
-    (10.1 61)
-    (10.6 67)
-    (11.0 73.5)
-    (11.1 74)
-    (11.6 81)
-    (12.3 89)
-    (12.6 94)
-    (13.1 100)))
-
-(defun interpolate (x1 y1 x2 y2 x)
-  "Linear interpolation for point x between (x1, y1) and (x2, y2)."
-  (+ y1 (* (/ (- x x1) (- x2 x1)) (- y2 y1))))
 
 (defun ma-to-cm (ma)
-  "Interpolates the water level in cm for a given sensor value in mA."
-  (let ((pairs *sensor-data*))
-    (loop :for (x1 y1) :in pairs
-          :for rest = (cdr pairs) :then (cdr rest)
-          :while rest
-          :for (x2 y2) = (car rest)
-          :when (and (<= x1 ma) (<= ma x2))
-            return (interpolate x1 y1 x2 y2 ma)
-          :finally (error "mA value ~A is out of bounds." ma))))
+  "Calculates the cm value for a given sensor value in mA."
+  (+ (* 13.33 ma) -75))
+
+(defun ma-to-percent (ma)
+  "Convert mA to percentage fill level linearly from 7.8mA = 0% to 13.1mA = 100%."
+  (+ (* 18.87 ma) -147.19))
 
 (defitem 'zist-sensor-curr "ZistSensorCurrency" 'float
   (binding :initial-delay 5
@@ -98,7 +81,10 @@
                    (openhab:do-post "ZistSensorCurrency" value)
 		   ;; calculate fillgrade in cm and set on item
 		   (set-item-value 'zist-fillgrade-cm
-				   (ma-to-cm value)))
+				   (ma-to-cm value))
+		   ;; calculate fillgrade in % and set on item
+		   (set-item-value 'zist-fillgrade-percent
+				   (ma-to-percent value)))
            :call-push-p t)
   :persistence '(:id :default
                  :frequency :every-change
@@ -114,9 +100,17 @@
 	   :call-push-p t)
   :persistence '(:id :default
                  :frequency :every-change
-                 :load-on-start t)
-  :persistence '(:id :influx-1m
-                 :frequency :every-change))
+                 :load-on-start t))
+
+(defitem 'zist-fillgrade-percent "ZistFillgradePercent" 'float
+  :initial-value 0.0
+  (binding :push (lambda (value)
+		   (log:debug "Pushing ZistFillgradePercent value: ~a" value)
+		   (openhab:do-post "ZistFillgradePercent" value))
+	   :call-push-p t)
+  :persistence '(:id :default
+                 :frequency :every-change
+                 :load-on-start t))
 
 ;; ---------------------
 ;; Eta
