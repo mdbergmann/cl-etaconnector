@@ -8,6 +8,7 @@
 	       "yason"
                "bit-smasher"
                "py4cl"
+	       "fiveam"
                )
   :components ((:module "src"
                 :serial t
