@@ -213,29 +213,29 @@
 ;; ---------------------
 
 (defmacro gen-reader-item-double (reader-pair
-				  qm-pair)
+				                  qm-pair)
   "Macro that generates 3 items for a reader, a reader-in and a qm item.
 The 'reader' (or 'meter') item represents the current value of the currency, water, whatever reader/meter.
 The 'qm' item represents the calculated value per day (or whatever) from the reader/meter."
   (let ((item-name (gensym))
-	(item-label (gensym))
-	(value-1 (gensym))
-	(value-2 (gensym)))
+	    (item-label (gensym))
+	    (value-1 (gensym))
+	    (value-2 (gensym)))
     `(progn
        (destructuring-bind (,item-name . ,item-label)
-	   ,reader-pair
-	 (defitem ,item-name ,item-label 'float
-	   :initial-value 0.0
-	   (binding :push (lambda (,value-1)
-                        (when ,item-label
-                          (log:debug "Pushing (~a) value: ~a" ,item-label ,value-1)
-                          (openhab:do-post ,item-label ,value-1)))
-                :call-push-p t)
-	   :persistence '(:id :default
-                      :frequency :every-change
-                      :load-on-start t)
-	   :persistence '(:id :influx
-			  :frequence :every-change)))
+	       ,reader-pair
+	     (defitem ,item-name ,item-label 'float
+	       :initial-value 0.0
+	       (binding :push (lambda (,value-1)
+                            (when ,item-label
+                              (log:debug "Pushing (~a) value: ~a" ,item-label ,value-1)
+                              (openhab:do-post ,item-label ,value-1)))
+                    :call-push-p t)
+	       :persistence '(:id :default
+                          :frequency :every-change
+                          :load-on-start t)
+	       :persistence '(:id :influx
+			              :frequence :every-change)))
        (destructuring-bind (,item-name . ,item-label)
            ,qm-pair
          (defitem ,item-name ,item-label 'float
@@ -268,7 +268,7 @@ The 'qm' item represents the calculated value per day (or whatever) from the rea
   (let ((new-qm-per-day
 	      (calc-reader-perday
 	       (list reader-value
-		     (get-universal-time))
+		         (get-universal-time))
 	       (multiple-value-list
 	        (get-item-valueq 'elec-reader-state)))))
     (set-item-value 'elec-kw-per-day new-qm-per-day)
@@ -278,7 +278,7 @@ The 'qm' item represents the calculated value per day (or whatever) from the rea
   (let ((new-qm-per-day
 	      (calc-reader-perday
 	       (list reader-value
-		     (get-universal-time))
+		         (get-universal-time))
 	       (multiple-value-list
 	        (get-item-valueq 'elec-oldh-reader-state)))))
     (set-item-value 'elec-oldh-kw-per-day new-qm-per-day)
@@ -308,25 +308,25 @@ The 'qm' item represents the calculated value per day (or whatever) from the rea
 ;; -------------
 
 (gen-reader-item-double '(elec-reader-state . "ElecReaderState")
-			'(elec-kw-per-day . "ElecKWattsPerDay"))
+			            '(elec-kw-per-day . "ElecKWattsPerDay"))
 
 ;; Garden reader
 ;; -------------
 
 (gen-reader-item-double '(elec-garden-reader-state . "ElecGarReaderState")
-			'(elec-garden-kw-per-day . "ElecGarKWattsPerDay"))
+			            '(elec-garden-kw-per-day . "ElecGarKWattsPerDay"))
 
 ;; Altes haus reader
 ;; -------------
 
 (gen-reader-item-double '(elec-oldh-reader-state . "ElecOldReaderState")
-			'(elec-oldh-kw-per-day . "ElecOldKWattsPerDay"))
+			            '(elec-oldh-kw-per-day . "ElecOldKWattsPerDay"))
 
 ;; Car loader reader
 ;; -------------
 
 (gen-reader-item-double '(elec-carloader-reader-state . "ElecCarLoaderReaderState")
-			'(elec-carloader-kw-per-day . "ElecCarLoaderKWattsPerDay"))
+			            '(elec-carloader-kw-per-day . "ElecCarLoaderKWattsPerDay"))
 
 ;; -----------------------------
 ;; Water
@@ -400,7 +400,7 @@ The 'qm' item represents the calculated value per day (or whatever) from the rea
 ;; ------------
 
 (gen-reader-item-double '(water-alt-garden-reader-state . nil)
-			'(water-alt-garden-qm-per-day . nil))
+			            '(water-alt-garden-qm-per-day . nil))
 
 (defun submit-alt-water-reader-value (reader-value)
   (let ((new-qm-per-day
@@ -417,13 +417,13 @@ The 'qm' item represents the calculated value per day (or whatever) from the rea
 ;; ---------------------
 
 (gen-reader-item-double '(chips-reload-volume . "ChipsReloadVolume")
-			'(chips-qm3-per-day . "ChipsPerDay"))
+			            '(chips-qm3-per-day . "ChipsPerDay"))
 
 (defun submit-chips-value (reader-value)
   (let ((new-chips-per-day
 	      (calc-reader-perday
 	       (list 0.0
-		     (get-universal-time))
+		         (get-universal-time))
 	       (multiple-value-list
 	        (get-item-valueq 'chips-reload-volume)))))
     (set-item-value 'chips-qm3-per-day new-chips-per-day)
@@ -468,19 +468,19 @@ The 'qm' item represents the calculated value per day (or whatever) from the rea
   (let ((total-day-item (get-item 'sol-power-total-day))
         (total-last-item (get-item 'sol-power-total-last)))
     (let* ((total-last-state (item:get-item-stateq total-last-item))
-	   (total-value (item:item-state-value total-last-state))
-	   (total-timestamp (item:item-state-timestamp total-last-state)))
+	       (total-value (item:item-state-value total-last-state))
+	       (total-timestamp (item:item-state-timestamp total-last-state)))
       (log:info "Have last total value: ~a W/h at timestamp: ~a" total-value total-timestamp)
       (multiple-value-bind (total daily)
           (eta-helper:calc-solar-total total-value total-timestamp)
-	(log:info "New daily solar: ~a W/h" daily)
-	(if (< daily 0)
-	    (log:info "Daily value < 0, not recoding.")
-	    (progn
-	      (item:set-value total-day-item daily)
-	      (item:set-value total-last-item total)))))))
+	    (log:info "New daily solar: ~a W/h" daily)
+	    (if (< daily 0)
+	        (log:info "Daily value < 0, not recoding.")
+	        (progn
+	          (item:set-value total-day-item daily)
+	          (item:set-value total-last-item total)))))))
 
-(defrule "Calc-Daily-Solar-Total" ; in kW
+(defrule "Calc-Daily-Solar-Total"       ; in kW
   :when-cron '(:minute 50 :hour 23)
   :do (lambda (trigger)
         (declare (ignore trigger))
@@ -526,17 +526,17 @@ The 'qm' item represents the calculated value per day (or whatever) from the rea
   `(defitem ,item-sym ,label ,type
      :initial-value ,initial-value
      :persistence '(:id :default
-		    :frequency :every-change
-		    :load-on-start t)))
+		            :frequency :every-change
+		            :load-on-start t)))
 
 (defmacro gen-item-fen-total-day (item-sym label type initial-value)
   `(defitem ,item-sym ,label ,type
      :initial-value ,initial-value
      :persistence '(:id :default
-		    :frequency :every-change
-		    :load-on-start t)
+		            :frequency :every-change
+		            :load-on-start t)
      :persistence '(:id :influx
-		    :frequency :every-change)))
+		            :frequency :every-change)))
 
 (gen-item-fen-total-day 'fen-pv-total-day "FenPVTotalDay" 'float 0.0) ;; in kWh/day
 (gen-item-fen-total-last 'fen-pv-total-last "FenPVTotalLast" 'integer 0) ;; in Wh
@@ -552,51 +552,51 @@ The 'qm' item represents the calculated value per day (or whatever) from the rea
 
 (defun calc-fen-total-day (current-total last-total last-timestamp)
   (let* ((val-diff (- current-total last-total))
-	 (time-diff (- (get-universal-time) last-timestamp))
-	 (days-diff (/ time-diff (* 60 60 24)))
-	 (result (truncate (/ val-diff days-diff))))
+	     (time-diff (- (get-universal-time) last-timestamp))
+	     (days-diff (/ time-diff (* 60 60 24)))
+	     (result (truncate (/ val-diff days-diff))))
     result))
 
 (defun calc-daily-pv-total ()
   (log:info "")
   (flet ((process-total (fen-rest fen-item-total-last fen-item-total-day)
-	   (let* ((current-total-value
-		    (multiple-value-bind (stat val)
-			(fen-if:read-item fen-rest)
-		      (case stat
-			(:ok val)
-			(otherwise (error val))))))
-	     (multiple-value-bind (last-value last-timestamp)
-		 (get-item-valueq fen-item-total-last)
-	       (set-item-value fen-item-total-day
-			       (calc-fen-total-day current-total-value
-						   last-value
-						   last-timestamp))
-	       (set-item-value fen-item-total-last current-total-value)))))
+	       (let* ((current-total-value
+		            (multiple-value-bind (stat val)
+			            (fen-if:read-item fen-rest)
+		              (case stat
+			            (:ok val)
+			            (otherwise (error val))))))
+	         (multiple-value-bind (last-value last-timestamp)
+		         (get-item-valueq fen-item-total-last)
+	           (set-item-value fen-item-total-day
+			                   (calc-fen-total-day current-total-value
+						                           last-value
+						                           last-timestamp))
+	           (set-item-value fen-item-total-last current-total-value)))))
     (ignore-errors
      (process-total "_sum/ProductionActiveEnergy"
-		    'fen-pv-total-last
-		    'fen-pv-total-day))
+		            'fen-pv-total-last
+		            'fen-pv-total-day))
     (ignore-errors
      (process-total "_sum/ConsumptionActiveEnergy"
-		    'fen-consum-total-last
-		    'fen-consum-total-day))
+		            'fen-consum-total-last
+		            'fen-consum-total-day))
     (ignore-errors
      (process-total "_sum/GridBuyActiveEnergy"
-		    'fen-grid-total-last
-		    'fen-grid-total-day))
+		            'fen-grid-total-last
+		            'fen-grid-total-day))
     (ignore-errors
      (process-total "_sum/GridSellActiveEnergy"
-		    'fen-grid-out-total-last
-		    'fen-grid-out-total-day))
+		            'fen-grid-out-total-last
+		            'fen-grid-out-total-day))
     ))
 
-(defrule "Calc-Daily-PV-Total" ;in kW
-    :when-cron '(:minute 51 :hour 23)
-    :do (lambda (trigger)
-	  (declare (ignore trigger))
-	  (log:info "Running Calc-Daily-PV-Total")
-	  (calc-daily-pv-total)))
+(defrule "Calc-Daily-PV-Total"          ;in kW
+  :when-cron '(:minute 51 :hour 23)
+  :do (lambda (trigger)
+	    (declare (ignore trigger))
+	    (log:info "Running Calc-Daily-PV-Total")
+	    (calc-daily-pv-total)))
 
 ;; ----------------------------
 ;; KNX items
@@ -622,50 +622,50 @@ The 'qm' item represents the calculated value per day (or whatever) from the rea
 
 (defitem 'heizstab-wd1 "Heizstab Wendel 1" 'boolean
   (knx-binding :ga '(:read "3/1/2" :write "3/1/1")
-	       :dpt "1.001"
-	       :call-push-p t))
+	           :dpt "1.001"
+	           :call-push-p t))
 (defitem 'heizstab-wd2 "Heizstab Wendel 2" 'boolean
   (knx-binding :ga '(:read "3/1/4" :write "3/1/3")
-	       :dpt "1.001"
-	       :call-push-p t))
+	           :dpt "1.001"
+	           :call-push-p t))
 (defitem 'heizstab-wd3 "Heizstab Wendel 3" 'boolean
   (knx-binding :ga '(:read "3/1/6" :write "3/1/5")
-	       :dpt "1.001"
-	       :call-push-p t))
+	           :dpt "1.001"
+	           :call-push-p t))
 
 (defun apply-new-hs-states ()
   (let* ((hs1 (cons 'heizstab-wd1 (get-item-valueq 'heizstab-wd1)))
-	 (hs2 (cons 'heizstab-wd2 (get-item-valueq 'heizstab-wd2)))
-	 (hs3 (cons 'heizstab-wd3 (get-item-valueq 'heizstab-wd3)))
-	 (hs-states (list hs2 hs1 hs3))) ; hs2 is main
+	     (hs2 (cons 'heizstab-wd2 (get-item-valueq 'heizstab-wd2)))
+	     (hs3 (cons 'heizstab-wd3 (get-item-valueq 'heizstab-wd3)))
+	     (hs-states (list hs2 hs1 hs3))) ; hs2 is main
     (let ((avail-energy (- (get-item-valueq 'fen-grid-act-power)))) ; negative goes to grid
       (let ((new-states (eta-helper:hs-compute-new-on-off-state
-			 hs-states avail-energy)))
-	(log:info "current-states: ~a, avail-energy: ~a, new-states: ~a"
-		  hs-states avail-energy new-states)
-	(dolist (new-state new-states)
-	  (destructuring-bind (hs . state) new-state
-	      (set-item-value hs state)))))))
+			             hs-states avail-energy)))
+	    (log:info "current-states: ~a, avail-energy: ~a, new-states: ~a"
+		          hs-states avail-energy new-states)
+	    (dolist (new-state new-states)
+	      (destructuring-bind (hs . state) new-state
+	        (set-item-value hs state)))))))
 
 (defrule "New on/off state of Heizstab"
-    :when-cron '(:minute :every :step-min 2)
-    :do (lambda (trigger)
-	  (declare (ignore trigger))
-	  (log:info "Running new Heizstab states...")
-	  (apply-new-hs-states)))
+  :when-cron '(:minute :every :step-min 2)
+  :do (lambda (trigger)
+	    (declare (ignore trigger))
+	    (log:info "Running new Heizstab states...")
+	    (apply-new-hs-states)))
 
 ;; Temperatures
 
 (defitem 'temp-outside
   "Temperatur aussen" 'float
   (knx-binding :ga "3/2/0"
-	       :dpt "9.001"
-	       :call-push-p t)
+	           :dpt "9.001"
+	           :call-push-p t)
   :persistence '(:id :default
-		 :frequency :every-change
-		 :load-on-start t)
+		         :frequency :every-change
+		         :load-on-start t)
   :persistence '(:id :influx
-		 :frequency :every-30m))
+		         :frequency :every-30m))
 
 ;; Room temperatures
 

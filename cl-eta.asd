@@ -5,10 +5,10 @@
   :depends-on ("chipi"
                "cserial-port"
                "drakma"
-	       "yason"
+               "yason"
                "bit-smasher"
                "py4cl"
-	       "fiveam"
+               "fiveam"
                )
   :components ((:module "src"
                 :serial t
