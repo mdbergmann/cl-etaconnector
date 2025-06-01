@@ -1,5 +1,5 @@
 (defpackage :cl-eta.helper
-  (:use :cl)
+  (:use :cl :fiveam)
   (:nicknames :eta-helper)
   (:export #:ina-read
            #:ina-init
@@ -11,6 +11,7 @@
            #:eta-start-record
            #:eta-stop-record
            #:eta-read-monitors
+	   #:hs-compute-new-on-off-state
            #:*eta-serial-device*))
 
 (in-package :cl-eta.helper)
@@ -181,3 +182,96 @@ Returns monitor items, car item name, cdr item value. Or `nil' if failed."
   (prog1
       (%eta-read-monitors +eta-new-empty-data+)
     (log:info "eta read monitors...done")))
+
+;; ------------------------------------
+;; Heizstab
+;; ------------------------------------
+
+(defvar *hs-energy* 1500
+  "Heizstab Wendel energy")
+(defvar *hs-on-threshold* 500
+  "Threshold on top of `*hs-energy*' until switched on.")
+
+(defun hs-compute-new-on-off-state (hs-states avail-energy)
+  "Calculates new on/off states for the Heizstäbe.
+Since we only know the currently available energy (in Watt) (that is pushed to grid),
+we have to substract the amount of energy that is currently consumed by the Heizstab
+in order to determine what should be their next state.
+
+Returns alist of Heizstab symbol and new state."
+  (let* ((hs-needed-energy (+ *hs-energy* *hs-on-threshold*))
+	 (hs-symbols (mapcar #'car hs-states))
+	 (hs-switch-states (mapcar #'cdr hs-states))
+	 (eff-avail-energy (+ avail-energy
+			      (reduce (lambda (acc item)
+					(+ acc (if (eq item 'item:true)
+						   *hs-energy*
+						   0)))
+				      hs-switch-states
+				      :initial-value 0))))
+    (loop :for hs :in hs-symbols
+	  :for hs-symbol := hs
+	  :for i := 1 :then (1+ i)
+	  :for min-req-energy := (* i hs-needed-energy)
+	  :collect (if (>= eff-avail-energy min-req-energy)
+		       (cons hs 'item:true)
+		       (cons hs 'item:false)))))
+
+(test hs-compute-new-on-off-state
+  "Tests that the functions returns proper values for new on-off states of Heizstab."
+  ;; turn on/off from off state
+  (is (equalp '((heizstab-wd2 . item:true)
+		(heizstab-wd1 . item:true)
+		(heizstab-wd3 . item:true))
+	      (hs-compute-new-on-off-state
+	       '((heizstab-wd2 . item:false)
+		 (heizstab-wd1 . item:false)
+		 (heizstab-wd3 . item:false)) 6001)))
+  (is (equalp '((heizstab-wd2 . item:true)
+		(heizstab-wd1 . item:true)
+		(heizstab-wd3 . item:false))
+	      (hs-compute-new-on-off-state
+	       '((heizstab-wd2 . item:false)
+		 (heizstab-wd1 . item:false)
+		 (heizstab-wd3 . item:false)) 5999)))
+  (is (equalp '((heizstab-wd2 . item:true)
+		(heizstab-wd1 . item:false)
+		(heizstab-wd3 . item:false))
+	      (hs-compute-new-on-off-state
+	       '((heizstab-wd2 . item:false)
+		 (heizstab-wd1 . item:false)
+		 (heizstab-wd3 . item:false)) 3999)))
+  ;; turn on/off from on state
+  (is (equalp '((heizstab-wd2 . item:true)
+		(heizstab-wd1 . item:true)
+		(heizstab-wd3 . item:true))
+	      (hs-compute-new-on-off-state
+	       '((heizstab-wd2 . item:true)
+		 (heizstab-wd1 . item:true)
+		 (heizstab-wd3 . item:true)) (- 6001
+						(* 3 *hs-energy*)))))
+  (is (equalp '((heizstab-wd2 . item:true)
+		(heizstab-wd1 . item:true)
+		(heizstab-wd3 . item:false))
+	      (hs-compute-new-on-off-state
+	       '((heizstab-wd2 . item:true)
+		 (heizstab-wd1 . item:true)
+		 (heizstab-wd3 . item:true)) (- 5999
+						(* 3 *hs-energy*)))))
+  (is (equalp '((heizstab-wd2 . item:true)
+		(heizstab-wd1 . item:false)
+		(heizstab-wd3 . item:false))
+	      (hs-compute-new-on-off-state
+	       '((heizstab-wd2 . item:true)
+		 (heizstab-wd1 . item:true)
+		 (heizstab-wd3 . item:true)) (- 3999
+						(* 3 *hs-energy*)))))
+  (is (equalp '((heizstab-wd2 . item:false)
+		(heizstab-wd1 . item:false)
+		(heizstab-wd3 . item:false))
+	      (hs-compute-new-on-off-state
+	       '((heizstab-wd2 . item:true)
+		 (heizstab-wd1 . item:true)
+		 (heizstab-wd3 . item:true)) (- 1999
+						(* 3 *hs-energy*)))))
+  )

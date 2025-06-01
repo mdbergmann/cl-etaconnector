@@ -5,6 +5,7 @@
   :depends-on ("chipi"
                "cserial-port"
                "drakma"
+	       "yason"
                "bit-smasher"
                "py4cl"
                )

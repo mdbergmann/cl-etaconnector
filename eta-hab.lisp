@@ -610,6 +610,50 @@ The 'qm' item represents the calculated value per day (or whatever) from the rea
                :dpt "1.001"
                :call-push-p t))
 
+
+;; Heizstab (Keller)
+
+;; (defitem 'heizstab-wd1-autom "Heizstab Wd1 automation" 'boolean
+;;   :default-value 'item:false)
+;; (defitem 'heizstab-wd2-autom "Heizstab Wd2 automation" 'boolean
+;;   :default-value 'item:false)
+;; (defitem 'heizstab-wd3-autom "Heizstab Wd3 automation" 'boolean
+;;   :default-value 'item:false)
+
+(defitem 'heizstab-wd1 "Heizstab Wendel 1" 'boolean
+  (knx-binding :ga '(:read "3/1/2" :write "3/1/1")
+	       :dpt "1.001"
+	       :call-push-p t))
+(defitem 'heizstab-wd2 "Heizstab Wendel 2" 'boolean
+  (knx-binding :ga '(:read "3/1/4" :write "3/1/3")
+	       :dpt "1.001"
+	       :call-push-p t))
+(defitem 'heizstab-wd3 "Heizstab Wendel 3" 'boolean
+  (knx-binding :ga '(:read "3/1/6" :write "3/1/5")
+	       :dpt "1.001"
+	       :call-push-p t))
+
+(defun apply-new-hs-states ()
+  (let* ((hs1 (cons 'heizstab-wd1 (get-item-valueq 'heizstab-wd1)))
+	 (hs2 (cons 'heizstab-wd2 (get-item-valueq 'heizstab-wd2)))
+	 (hs3 (cons 'heizstab-wd3 (get-item-valueq 'heizstab-wd3)))
+	 (hs-states (list hs2 hs1 hs3))) ; hs2 is main
+    (let ((avail-energy (- (get-item-valueq 'fen-grid-act-power)))) ; negative goes to grid
+      (let ((new-states (eta-helper:hs-compute-new-on-off-state
+			 hs-states avail-energy)))
+	(log:info "current-states: ~a, avail-energy: ~a, new-states: ~a"
+		  hs-states avail-energy new-states)
+	(dolist (new-state new-states)
+	  (destructuring-bind (hs . state) new-state
+	      (set-item-value hs state)))))))
+
+(defrule "New on/off state of Heizstab"
+    :when-cron '(:minute :every :step-min 2)
+    :do (lambda (trigger)
+	  (declare (ignore trigger))
+	  (log:info "Running new Heizstab states...")
+	  (apply-new-hs-states)))
+
 ;; Temperatures
 
 (defitem 'temp-outside
