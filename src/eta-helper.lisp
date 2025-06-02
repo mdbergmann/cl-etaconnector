@@ -192,7 +192,7 @@ Returns monitor items, car item name, cdr item value. Or `nil' if failed."
 (defparameter *hs-on-threshold* 600
   "Threshold on top of `*hs-energy*' until switched on.")
 
-(defun hs-compute-new-on-off-state (hs-states avail-energy)
+(defun hs-compute-new-on-off-state (hs-states avail-energy &optional (hs-overrides nil))
   "Calculates new on/off states for the Heizstäbe.
 Since we only know the currently available energy (in Watt) (that is pushed to grid),
 we have to substract the amount of energy that is currently consumed by the Heizstab
@@ -213,9 +213,12 @@ Returns alist of Heizstab symbol and new state."
 	      :for hs-symbol := hs
 	      :for i := 1 :then (1+ i)
 	      :for min-req-energy := (* i hs-needed-energy)
-	      :collect (if (>= eff-avail-energy min-req-energy)
-		               (cons hs 'item:true)
-		               (cons hs 'item:false)))))
+	      :collect (let ((override (assoc hs hs-overrides)))
+                     (if override
+                         (cons hs (cdr override))
+                         (if (>= eff-avail-energy min-req-energy)
+                             (cons hs 'item:true)
+                             (cons hs 'item:false)))))))
 
 (test hs-compute-new-on-off-state
   "Tests that the functions returns proper values for new on-off states of Heizstab."
@@ -226,21 +229,24 @@ Returns alist of Heizstab symbol and new state."
 	          (hs-compute-new-on-off-state
 	           '((heizstab-wd2 . item:false)
 		         (heizstab-wd1 . item:false)
-		         (heizstab-wd3 . item:false)) 6001)))
+		         (heizstab-wd3 . item:false))
+               (+ (* *hs-energy* 3) (* *hs-on-threshold* 3)))))
   (is (equalp '((heizstab-wd2 . item:true)
 		        (heizstab-wd1 . item:true)
 		        (heizstab-wd3 . item:false))
 	          (hs-compute-new-on-off-state
 	           '((heizstab-wd2 . item:false)
 		         (heizstab-wd1 . item:false)
-		         (heizstab-wd3 . item:false)) 5999)))
+		         (heizstab-wd3 . item:false))
+               (+ (* *hs-energy* 2) (* *hs-on-threshold* 2)))))
   (is (equalp '((heizstab-wd2 . item:true)
 		        (heizstab-wd1 . item:false)
 		        (heizstab-wd3 . item:false))
 	          (hs-compute-new-on-off-state
 	           '((heizstab-wd2 . item:false)
 		         (heizstab-wd1 . item:false)
-		         (heizstab-wd3 . item:false)) 3999)))
+		         (heizstab-wd3 . item:false))
+               (+ (* *hs-energy* 1) (* *hs-on-threshold* 1)))))
   ;; turn on/off from on state
   (is (equalp '((heizstab-wd2 . item:true)
 		        (heizstab-wd1 . item:true)
@@ -248,30 +254,67 @@ Returns alist of Heizstab symbol and new state."
 	          (hs-compute-new-on-off-state
 	           '((heizstab-wd2 . item:true)
 		         (heizstab-wd1 . item:true)
-		         (heizstab-wd3 . item:true)) (- 6001
-				 (* 3 *hs-energy*)))))
+		         (heizstab-wd3 . item:true))
+               (- (+ (* *hs-energy* 3) (* *hs-on-threshold* 3))
+                  (* 3 *hs-energy*)))))
   (is (equalp '((heizstab-wd2 . item:true)
 		        (heizstab-wd1 . item:true)
 		        (heizstab-wd3 . item:false))
 	          (hs-compute-new-on-off-state
 	           '((heizstab-wd2 . item:true)
 		         (heizstab-wd1 . item:true)
-		         (heizstab-wd3 . item:true)) (- 5999
-				 (* 3 *hs-energy*)))))
+		         (heizstab-wd3 . item:true))
+               (- (+ (* *hs-energy* 2) (* *hs-on-threshold* 2))
+                  (* 3 *hs-energy*)))))
   (is (equalp '((heizstab-wd2 . item:true)
 		        (heizstab-wd1 . item:false)
 		        (heizstab-wd3 . item:false))
 	          (hs-compute-new-on-off-state
 	           '((heizstab-wd2 . item:true)
 		         (heizstab-wd1 . item:true)
-		         (heizstab-wd3 . item:true)) (- 3999
-				 (* 3 *hs-energy*)))))
+		         (heizstab-wd3 . item:true))
+               (- (+ (* *hs-energy* 1) (* *hs-on-threshold* 1))
+                  (* 3 *hs-energy*)))))
   (is (equalp '((heizstab-wd2 . item:false)
 		        (heizstab-wd1 . item:false)
 		        (heizstab-wd3 . item:false))
 	          (hs-compute-new-on-off-state
 	           '((heizstab-wd2 . item:true)
 		         (heizstab-wd1 . item:true)
-		         (heizstab-wd3 . item:true)) (- 1999
-				 (* 3 *hs-energy*)))))
-  )
+		         (heizstab-wd3 . item:true))
+               (- (+ (* *hs-energy* 0) (* *hs-on-threshold* 3))
+                  (* 3 *hs-energy*))))))
+
+(test hs-overrides
+  ;; activate with override
+  (is (equalp '((heizstab-wd2 . item:true)
+                (heizstab-wd1 . item:false)
+                (heizstab-wd3 . item:true))
+              (hs-compute-new-on-off-state
+               '((heizstab-wd2 . item:false)
+		         (heizstab-wd1 . item:false)
+		         (heizstab-wd3 . item:false))
+               0 ; not enough energy to activate any
+               '((heizstab-wd2 . item:true)
+                 (heizstab-wd1 . item:false)
+                 (heizstab-wd3 . item:true)))))
+  (is (equalp '((heizstab-wd2 . item:true)
+                (heizstab-wd1 . item:true)
+                (heizstab-wd3 . item:false))
+              (hs-compute-new-on-off-state
+               '((heizstab-wd2 . item:false)
+		         (heizstab-wd1 . item:false)
+		         (heizstab-wd3 . item:false))
+               (+ *hs-energy* *hs-on-threshold*)
+               '((heizstab-wd1 . item:true)))))
+  ;; deactivate with override
+  (is (equalp '((heizstab-wd2 . item:true)
+                (heizstab-wd1 . item:false)
+                (heizstab-wd3 . item:false))
+              (hs-compute-new-on-off-state
+               '((heizstab-wd2 . item:false)
+		         (heizstab-wd1 . item:false)
+		         (heizstab-wd3 . item:false))
+               (+ (* *hs-energy* 2) (* *hs-on-threshold* 2))
+               '((heizstab-wd1 . item:false))
+               ))))

@@ -613,12 +613,26 @@ The 'qm' item represents the calculated value per day (or whatever) from the rea
 
 ;; Heizstab (Keller)
 
-;; (defitem 'heizstab-wd1-autom "Heizstab Wd1 automation" 'boolean
-;;   :default-value 'item:false)
-;; (defitem 'heizstab-wd2-autom "Heizstab Wd2 automation" 'boolean
-;;   :default-value 'item:false)
-;; (defitem 'heizstab-wd3-autom "Heizstab Wd3 automation" 'boolean
-;;   :default-value 'item:false)
+(defitem 'heizstab-wd1-override "Heizstab Wd1 überschreiben" 'boolean
+  :default-value 'item:false
+  :persistence '(:id :default
+                 :frequency :every-change
+                 :load-on-start t))
+(defitem 'heizstab-wd2-override "Heizstab Wd2 überschreiben" 'boolean
+  :default-value 'item:false
+  :persistence '(:id :default
+		         :frequency :every-change
+		         :load-on-start t))
+(defitem 'heizstab-wd3-override "Heizstab Wd3 überschreiben" 'boolean
+  :default-value 'item:false
+  :persistence '(:id :default
+		         :frequency :every-change
+		         :load-on-start t))
+(defitem 'heizstab-override-active "Heizstab überschreiben aktiv" 'boolean
+  :default-value 'item:false
+  :persistence '(:id :default
+		         :frequency :every-change
+		         :load-on-start t))
 
 (defitem 'heizstab-wd1 "Heizstab Wendel 1" 'boolean
   (knx-binding :ga '(:read "3/1/2" :write "3/1/1")
@@ -637,12 +651,18 @@ The 'qm' item represents the calculated value per day (or whatever) from the rea
   (let* ((hs1 (cons 'heizstab-wd1 (get-item-valueq 'heizstab-wd1)))
 	     (hs2 (cons 'heizstab-wd2 (get-item-valueq 'heizstab-wd2)))
 	     (hs3 (cons 'heizstab-wd3 (get-item-valueq 'heizstab-wd3)))
-	     (hs-states (list hs2 hs1 hs3))) ; hs2 is main
-    (let ((avail-energy (- (get-item-valueq 'fen-grid-act-power)))) ; negative goes to grid
-      (let ((new-states (eta-helper:hs-compute-new-on-off-state
-			             hs-states avail-energy)))
-	    (log:info "current-states: ~a, avail-energy: ~a, new-states: ~a"
-		          hs-states avail-energy new-states)
+	     (hs-states (list hs2 hs1 hs3)) ; hs2 is main
+         (hs-override (get-item-valueq 'heizstab-override-active))
+         (hs-overrides (if hs-override
+                           (list (cons 'heizstab-wd1 (get-item-valueq 'heizstab-wd1-override))
+                                 (cons 'heizstab-wd2 (get-item-valueq 'heizstab-wd2-override))
+                                 (cons 'heizstab-wd3 (get-item-valueq 'heizstab-wd3-override)))
+                           nil))
+         (avail-energy (- (get-item-valueq 'fen-grid-act-power))) ; negative goes to grid
+         (new-states (eta-helper:hs-compute-new-on-off-state
+                      hs-states avail-energy hs-overrides)))
+	    (log:info "current-states: ~a, avail-energy: ~a, new-states: ~a, overrides: ~a"
+		          hs-states avail-energy new-states hs-overrides)
 	    (dolist (new-state new-states)
 	      (destructuring-bind (hs . state) new-state
 	        (set-item-value hs state)))))))
