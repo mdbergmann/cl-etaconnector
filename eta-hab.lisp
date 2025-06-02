@@ -1,10 +1,8 @@
-(eval-when (:compile-toplevel :load-toplevel :execute)
-  (asdf:load-system :py4cl)
-  (load #P"src/ina219-if.lisp") ; This helps with recompiling ina219
-  (asdf:load-system :cl-eta)
-  (asdf:load-asd "/home/manfred/quicklisp/local-projects/chipi/bindings/knx/binding-knx.asd"
-                 :name "binding-knx")
-  (asdf:load-system :binding-knx))
+;;
+;; Main Chipi script defining all items and the whole system
+;; load via (asdf:load-system :eta-hab) when in the chipi folder.
+;;
+
 
 (defpackage :eta-hab
   (:use :cl :chipi.hab :chipi.binding.knx)
@@ -18,13 +16,20 @@
 
 (log:config :warn)
 (log:config '(chipi) :warn)
-(log:config '(cl-eta) :info)
-(log:config '(eta-hab) :info)
+(log:config '(chipi-web) :warn)
+(log:config '(cl-eta) :warn)
+(log:config '(eta-hab) :warn)
 (log:config '(knx-conn) :info)
 (log:config :sane :this-console :daily "logs/app.log")
 
 ;; configure underlying actor system, timers, cron, etc.
-(defconfig
+(defconfig "eta-hab"
+  (api-env:init :apikey-store (apikey-store:make-simple-file-backend)
+                :apikey-lifetime (ltd:duration :day 100))
+  ;; maybe create additional api-keys with different access-rights
+  ;; see (apikey-store:create-apikey)
+  (api:start :address "192.168.50.43")
+
   (knx-init :gw-host "192.168.50.40")
   )
 
@@ -659,13 +664,14 @@ The 'qm' item represents the calculated value per day (or whatever) from the rea
                                  (cons 'heizstab-wd3 (get-item-valueq 'heizstab-wd3-override)))
                            nil))
          (avail-energy (- (get-item-valueq 'fen-grid-act-power))) ; negative goes to grid
-         (new-states (eta-helper:hs-compute-new-on-off-state
-                      hs-states avail-energy hs-overrides)))
+         (new-states
+           (eta-helper:hs-compute-new-on-off-state
+            hs-states avail-energy hs-overrides)))
 	    (log:info "current-states: ~a, avail-energy: ~a, new-states: ~a, overrides: ~a"
 		          hs-states avail-energy new-states hs-overrides)
 	    (dolist (new-state new-states)
 	      (destructuring-bind (hs . state) new-state
-	        (set-item-value hs state)))))))
+	        (set-item-value hs state)))))
 
 (defrule "New on/off state of Heizstab"
   :when-cron '(:minute :every :step-min 15)

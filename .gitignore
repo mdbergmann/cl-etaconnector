@@ -5,3 +5,4 @@
 *.64xfasl
 /cl-cron.log
 /logs/
+/runtime/
