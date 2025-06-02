@@ -189,7 +189,7 @@ Returns monitor items, car item name, cdr item value. Or `nil' if failed."
 
 (defvar *hs-energy* 1500
   "Heizstab Wendel energy")
-(defparameter *hs-on-threshold* 700
+(defparameter *hs-on-threshold* 800
   "Threshold on top of `*hs-energy*' until switched on.")
 
 (defun hs-compute-new-on-off-state (hs-states avail-energy)
