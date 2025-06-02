@@ -614,22 +614,22 @@ The 'qm' item represents the calculated value per day (or whatever) from the rea
 ;; Heizstab (Keller)
 
 (defitem 'heizstab-wd1-override "Heizstab Wd1 überschreiben" 'boolean
-  :default-value 'item:false
+  :initial-value 'item:false
   :persistence '(:id :default
                  :frequency :every-change
                  :load-on-start t))
 (defitem 'heizstab-wd2-override "Heizstab Wd2 überschreiben" 'boolean
-  :default-value 'item:false
+  :initial-value 'item:false
   :persistence '(:id :default
 		         :frequency :every-change
 		         :load-on-start t))
 (defitem 'heizstab-wd3-override "Heizstab Wd3 überschreiben" 'boolean
-  :default-value 'item:false
+  :initial-value 'item:false
   :persistence '(:id :default
 		         :frequency :every-change
 		         :load-on-start t))
 (defitem 'heizstab-override-active "Heizstab überschreiben aktiv" 'boolean
-  :default-value 'item:false
+  :initial-value 'item:false
   :persistence '(:id :default
 		         :frequency :every-change
 		         :load-on-start t))
