@@ -648,7 +648,7 @@ The 'qm' item represents the calculated value per day (or whatever) from the rea
 	        (set-item-value hs state)))))))
 
 (defrule "New on/off state of Heizstab"
-  :when-cron '(:minute :every :step-min 10)
+  :when-cron '(:minute :every :step-min 15)
   :do (lambda (trigger)
 	    (declare (ignore trigger))
 	    (log:info "Running new Heizstab states...")
