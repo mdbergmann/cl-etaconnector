@@ -53,6 +53,11 @@
        :org "mabe"
        :bucket "hab-1month")))
 
+(defparameter *default-persp-every-change*
+  '(:id :default
+    :frequency :every-change
+    :load-on-start t))
+
 (defrule "Init externals"
   :when-cron '(:boot-only t)  ; beware all other cron keys are at :every
   :do (lambda (trigger)
@@ -79,7 +84,7 @@
 
 (defitemgroup 'zisterne "Zisterne")
 
-(defitem 'zist-sensor-curr "ZistSensorCurrency" 'float
+(defitem 'zist-sensor-curr "Strom Zisternen-Sensor [mA]" 'float
   :group 'zisterne
   (binding :initial-delay 5
            :delay (* 60 10) ;; 10 minutes
@@ -94,33 +99,27 @@
 		   (set-item-value 'zist-fillgrade-percent
 				   (ma-to-percent value)))
            :call-push-p t)
-  :persistence '(:id :default
-                 :frequency :every-change
-                 :load-on-start t)
+  :persistence *default-persp-every-change*
   :persistence '(:id :influx-1m
                  :frequency :every-change))
 
-(defitem 'zist-fillgrade-cm "ZistFillgrade" 'float
+(defitem 'zist-fillgrade-cm "Füllgrad Zisterne [cm]" 'float
   :initial-value 0.0
   :group 'zisterne
   (binding :push (lambda (value)
 		   (log:debug "Pushing ZistFillgrade value: ~a" value)
 		   (openhab:do-post "ZistFillgrade" value))
 	   :call-push-p t)
-  :persistence '(:id :default
-                 :frequency :every-change
-                 :load-on-start t))
+  :persistence *default-persp-every-change*)
 
-(defitem 'zist-fillgrade-percent "ZistFillgradePercent" 'float
+(defitem 'zist-fillgrade-percent "Füllgrad Zisterne [%]" 'float
   :initial-value 0.0
   :group 'zisterne
   (binding :push (lambda (value)
 		   (log:debug "Pushing ZistFillgradePercent value: ~a" value)
 		   (openhab:do-post "ZistFillgradePercent" value))
 	   :call-push-p t)
-  :persistence '(:id :default
-                 :frequency :every-change
-                 :load-on-start t))
+  :persistence *default-persp-every-change*)
 
 ;; ---------------------
 ;; Eta
@@ -150,9 +149,7 @@
                      (openhab:do-post (second i) value))
              :call-push-p t)
     :group 'eta
-    :persistence '(:id :default
-                   :frequency :every-change
-                   :load-on-start t)
+    :persistence *default-persp-every-change*
     :persistence '(:id :influx
                    :frequency :every-5m)))
 
@@ -162,9 +159,7 @@
                    (openhab:do-post "HeatingETAOpHoursPerDay" value))
            :call-push-p t)
   :group 'eta
-  :persistence '(:id :default
-                 :frequency :every-change
-                 :load-on-start t)
+  :persistence *default-persp-every-change*
   :persistence '(:id :influx
                  :frequency :every-change))
 
@@ -249,9 +244,7 @@ The 'qm' item represents the calculated value per day (or whatever) from the rea
                               (log:debug "Pushing (~a) value: ~a" ,item-label ,value-1)
                               (openhab:do-post ,item-label ,value-1)))
                     :call-push-p t)
-	       :persistence '(:id :default
-                          :frequency :every-change
-                          :load-on-start t)
+	       :persistence *default-persp-every-change*
 	       :persistence '(:id :influx
 			              :frequence :every-change)))
        (destructuring-bind (,item-name . ,item-label)
@@ -263,9 +256,7 @@ The 'qm' item represents the calculated value per day (or whatever) from the rea
                             (log:debug "Pushing (~a) value: ~a" ,item-label ,value-2)
                             (openhab:do-post ,item-label ,value-2))
                     :call-push-p t)
-           :persistence '(:id :default
-                          :frequency :every-change
-                          :load-on-start t)
+           :persistence *default-persp-every-change*
            :persistence '(:id :influx
                           :frequency :every-change))
          ))))
@@ -472,9 +463,7 @@ The 'qm' item represents the calculated value per day (or whatever) from the rea
   ;; this item is just a storage for the last transmitted value
   ;; in W/h
   :group 'balkonsolar
-  :persistence '(:id :default
-                 :frequency :every-change
-                 :load-on-start t))
+  :persistence *default-persp-every-change*)
 (defitem 'sol-power-total-day "SolarPowerTotalDay" 'integer
   ;; in W/h
   :initial-value 0
@@ -483,9 +472,7 @@ The 'qm' item represents the calculated value per day (or whatever) from the rea
                    (log:debug "Pushing (SolarPowerTotalDay) value: ~a" value)
                    (openhab:do-post "SolarPowerTotalDay" value))
            :call-push-p t)
-  :persistence '(:id :default
-                 :frequency :every-change
-                 :load-on-start t)
+  :persistence *default-persp-every-change*
   :persistence '(:id :influx
                  :frequency :every-change))
 (defitem 'sol-power-mom "SolarPowerMom" 'integer
@@ -493,9 +480,7 @@ The 'qm' item represents the calculated value per day (or whatever) from the rea
            :delay 30
            :pull (lambda () (eta-helper:solar-read)))
   :group 'balkonsolar
-  :persistence '(:id :default
-                 :frequency :every-change
-                 :load-on-start t)
+  :persistence *default-persp-every-change*
   :persistence '(:id :influx
                  :frequency :every-change))
 
@@ -555,9 +540,7 @@ The 'qm' item represents the calculated value per day (or whatever) from the rea
                :initial-delay 10
                :delay 30
                :call-push-p t)
-      :persistence '(:id :default
-                     :frequency :every-change
-                     :load-on-start t)
+      :persistence *default-persp-every-change*
       :persistence '(:id :influx
                      :frequency :every-change))))
 
@@ -568,17 +551,13 @@ The 'qm' item represents the calculated value per day (or whatever) from the rea
   `(defitem ,item-sym ,label ,type
      :initial-value ,initial-value
      :group 'fen
-     :persistence '(:id :default
-		            :frequency :every-change
-		            :load-on-start t)))
+     :persistence *default-persp-every-change*))
 
 (defmacro gen-item-fen-total-day (item-sym label type initial-value)
   `(defitem ,item-sym ,label ,type
      :initial-value ,initial-value
      :group 'fen
-     :persistence '(:id :default
-		            :frequency :every-change
-		            :load-on-start t)
+     :persistence *default-persp-every-change*
      :persistence '(:id :influx
 		            :frequency :every-change)))
 
@@ -665,27 +644,19 @@ The 'qm' item represents the calculated value per day (or whatever) from the rea
 (defitem 'heizstab-wd1-override "Heizstab Wd1 überschreiben" 'boolean
   :initial-value 'item:false
   :group 'heizstab
-  :persistence '(:id :default
-                 :frequency :every-change
-                 :load-on-start t))
+  :persistence *default-persp-every-change*)
 (defitem 'heizstab-wd2-override "Heizstab Wd2 überschreiben" 'boolean
   :initial-value 'item:false
   :group 'heizstab
-  :persistence '(:id :default
-		         :frequency :every-change
-		         :load-on-start t))
+  :persistence *default-persp-every-change*)
 (defitem 'heizstab-wd3-override "Heizstab Wd3 überschreiben" 'boolean
   :initial-value 'item:false
   :group 'heizstab
-  :persistence '(:id :default
-		         :frequency :every-change
-		         :load-on-start t))
+  :persistence *default-persp-every-change*)
 (defitem 'heizstab-override-active "Heizstab überschreiben aktiv" 'boolean
   :initial-value 'item:false
   :group 'heizstab
-  :persistence '(:id :default
-		         :frequency :every-change
-		         :load-on-start t))
+  :persistence *default-persp-every-change*)
 
 (defitem 'heizstab-wd1 "Heizstab Wendel 1" 'boolean
   :group 'heizstab
@@ -741,9 +712,7 @@ The 'qm' item represents the calculated value per day (or whatever) from the rea
   (knx-binding :ga "3/2/0"
 	           :dpt "9.001"
 	           :call-push-p t)
-  :persistence '(:id :default
-		         :frequency :every-change
-		         :load-on-start t)
+  :persistence *default-persp-every-change*
   :persistence '(:id :influx
 		         :frequency :every-30m))
 
