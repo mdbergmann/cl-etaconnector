@@ -77,7 +77,10 @@
   "Convert mA to percentage fill level linearly from 7.8mA = 0% to 13.1mA = 100%."
   (+ (* 18.87 ma) -147.19))
 
+(defitemgroup 'zisterne "Zisterne")
+
 (defitem 'zist-sensor-curr "ZistSensorCurrency" 'float
+  :group 'zisterne
   (binding :initial-delay 5
            :delay (* 60 10) ;; 10 minutes
            :pull (lambda () (eta-helper:ina-read))
@@ -99,6 +102,7 @@
 
 (defitem 'zist-fillgrade-cm "ZistFillgrade" 'float
   :initial-value 0.0
+  :group 'zisterne
   (binding :push (lambda (value)
 		   (log:debug "Pushing ZistFillgrade value: ~a" value)
 		   (openhab:do-post "ZistFillgrade" value))
@@ -109,6 +113,7 @@
 
 (defitem 'zist-fillgrade-percent "ZistFillgradePercent" 'float
   :initial-value 0.0
+  :group 'zisterne
   (binding :push (lambda (value)
 		   (log:debug "Pushing ZistFillgradePercent value: ~a" value)
 		   (openhab:do-post "ZistFillgradePercent" value))
@@ -136,12 +141,15 @@
     (eta-temp-puffer-unten "EtaPufferUnten" float)
     (eta-temp-vorlaufmk0 "EtaVorlaufMK0" float)))
 
+(defitemgroup 'eta "Eta")
+
 (dolist (i *eta-raw-items*)
   (defitem (first i) (second i) (third i)
     (binding :push (lambda (value)
                      (log:debug "Pushing value: ~a" value)
                      (openhab:do-post (second i) value))
              :call-push-p t)
+    :group 'eta
     :persistence '(:id :default
                    :frequency :every-change
                    :load-on-start t)
@@ -153,6 +161,7 @@
                    (log:debug "Pushing (HeatingETAOpHoursPerDay) value: ~a" value)
                    (openhab:do-post "HeatingETAOpHoursPerDay" value))
            :call-push-p t)
+  :group 'eta
   :persistence '(:id :default
                  :frequency :every-change
                  :load-on-start t)
@@ -217,8 +226,11 @@
 ;; Strom
 ;; ---------------------
 
+(defitemgroup 'stromzaehler "Stromzähler")
+
 (defmacro gen-reader-item-double (reader-pair
-				                  qm-pair)
+				                  qm-pair
+                                  group)
   "Macro that generates 3 items for a reader, a reader-in and a qm item.
 The 'reader' (or 'meter') item represents the current value of the currency, water, whatever reader/meter.
 The 'qm' item represents the calculated value per day (or whatever) from the reader/meter."
@@ -231,6 +243,7 @@ The 'qm' item represents the calculated value per day (or whatever) from the rea
 	       ,reader-pair
 	     (defitem ,item-name ,item-label 'float
 	       :initial-value 0.0
+           :group ,group
 	       (binding :push (lambda (,value-1)
                             (when ,item-label
                               (log:debug "Pushing (~a) value: ~a" ,item-label ,value-1)
@@ -245,6 +258,7 @@ The 'qm' item represents the calculated value per day (or whatever) from the rea
            ,qm-pair
          (defitem ,item-name ,item-label 'float
            :initial-value 0.0
+           :group ,group
            (binding :push (lambda (,value-2)
                             (log:debug "Pushing (~a) value: ~a" ,item-label ,value-2)
                             (openhab:do-post ,item-label ,value-2))
@@ -313,35 +327,42 @@ The 'qm' item represents the calculated value per day (or whatever) from the rea
 ;; -------------
 
 (gen-reader-item-double '(elec-reader-state . "ElecReaderState")
-			            '(elec-kw-per-day . "ElecKWattsPerDay"))
+			            '(elec-kw-per-day . "ElecKWattsPerDay")
+                        'stromzaehler)
 
 ;; Garden reader
 ;; -------------
 
 (gen-reader-item-double '(elec-garden-reader-state . "ElecGarReaderState")
-			            '(elec-garden-kw-per-day . "ElecGarKWattsPerDay"))
+			            '(elec-garden-kw-per-day . "ElecGarKWattsPerDay")
+                        'stromzaehler)
 
 ;; Altes haus reader
 ;; -------------
 
 (gen-reader-item-double '(elec-oldh-reader-state . "ElecOldReaderState")
-			            '(elec-oldh-kw-per-day . "ElecOldKWattsPerDay"))
+			            '(elec-oldh-kw-per-day . "ElecOldKWattsPerDay")
+                        'stromzaehler)
 
 ;; Car loader reader
 ;; -------------
 
 (gen-reader-item-double '(elec-carloader-reader-state . "ElecCarLoaderReaderState")
-			            '(elec-carloader-kw-per-day . "ElecCarLoaderKWattsPerDay"))
+			            '(elec-carloader-kw-per-day . "ElecCarLoaderKWattsPerDay")
+                        'stromzaehler)
 
 ;; -----------------------------
 ;; Water
 ;; -----------------------------
 
+(defitemgroup 'wasser "Wasser")
+
 ;; Main reader
 ;; -----------
 
 (gen-reader-item-double '(water-reader-state . "WaterReaderState")
-			            '(water-qm-per-day . "WaterQMPerDay"))
+			            '(water-qm-per-day . "WaterQMPerDay")
+                        'wasser)
 
 (defun submit-main-water-reader-value (reader-value)
   (let ((new-qm-per-day
@@ -357,7 +378,8 @@ The 'qm' item represents the calculated value per day (or whatever) from the rea
 ;; -------------
 
 (gen-reader-item-double '(water-garden-reader-state . "GardenWaterReaderState")
-			            '(water-garden-qm-per-day . "GardenGardenQMPerDay"))
+			            '(water-garden-qm-per-day . "GardenGardenQMPerDay")
+                        'wasser)
 
 (defun submit-garden-water-reader-value (reader-value)
   (let ((new-qm-per-day
@@ -373,7 +395,8 @@ The 'qm' item represents the calculated value per day (or whatever) from the rea
 ;; -----------
 
 (gen-reader-item-double '(water-fresh-reader-state . "FreshInWaterReaderState")
-			            '(water-fresh-qm-per-day . "FreshInWaterQMPerDay"))
+			            '(water-fresh-qm-per-day . "FreshInWaterQMPerDay")
+                        'wasser)
 
 (defun submit-fresh-water-reader-value (reader-value)
   (let ((new-qm-per-day
@@ -389,7 +412,8 @@ The 'qm' item represents the calculated value per day (or whatever) from the rea
 ;; --------------
 
 (gen-reader-item-double '(water-zist-reader-state . "ZistInWaterReaderState")
-			            '(water-zist-qm-per-day . "ZistInWaterQMPerDay"))
+			            '(water-zist-qm-per-day . "ZistInWaterQMPerDay")
+                        'wasser)
 
 (defun submit-zist-water-reader-value (reader-value)
   (let ((new-qm-per-day
@@ -405,7 +429,8 @@ The 'qm' item represents the calculated value per day (or whatever) from the rea
 ;; ------------
 
 (gen-reader-item-double '(water-alt-garden-reader-state . nil)
-			            '(water-alt-garden-qm-per-day . nil))
+			            '(water-alt-garden-qm-per-day . nil)
+                        'wasser)
 
 (defun submit-alt-water-reader-value (reader-value)
   (let ((new-qm-per-day
@@ -421,8 +446,11 @@ The 'qm' item represents the calculated value per day (or whatever) from the rea
 ;; Chips
 ;; ---------------------
 
+(defitemgroup 'hackschnitzel "Hackschnitzel")
+
 (gen-reader-item-double '(chips-reload-volume . "ChipsReloadVolume")
-			            '(chips-qm3-per-day . "ChipsPerDay"))
+			            '(chips-qm3-per-day . "ChipsPerDay")
+                        'hackschnitzel)
 
 (defun submit-chips-value (reader-value)
   (let ((new-chips-per-day
@@ -437,15 +465,20 @@ The 'qm' item represents the calculated value per day (or whatever) from the rea
 ;; ---------------------
 ;; Solar
 ;; ---------------------
+
+(defitemgroup 'balkonsolar "Solar Balkon")
+
 (defitem 'sol-power-total-last "SolarPowerTotalLast" 'integer
   ;; this item is just a storage for the last transmitted value
   ;; in W/h
+  :group 'balkonsolar
   :persistence '(:id :default
                  :frequency :every-change
                  :load-on-start t))
 (defitem 'sol-power-total-day "SolarPowerTotalDay" 'integer
   ;; in W/h
   :initial-value 0
+  :group 'balkonsolar
   (binding :push (lambda (value)
                    (log:debug "Pushing (SolarPowerTotalDay) value: ~a" value)
                    (openhab:do-post "SolarPowerTotalDay" value))
@@ -459,6 +492,7 @@ The 'qm' item represents the calculated value per day (or whatever) from the rea
   (binding :initial-delay 5
            :delay 30
            :pull (lambda () (eta-helper:solar-read)))
+  :group 'balkonsolar
   :persistence '(:id :default
                  :frequency :every-change
                  :load-on-start t)
@@ -495,6 +529,8 @@ The 'qm' item represents the calculated value per day (or whatever) from the rea
 ;; Fenecon readers
 ;; ----------------------------
 
+(defitemgroup 'fen "Fenecon")
+
 ;; Momentary
 ;; ----------
 
@@ -512,6 +548,7 @@ The 'qm' item represents the calculated value per day (or whatever) from the rea
   (destructuring-bind (item-id item-label rest-path item-val-type) i
     (defitem item-id item-label item-val-type
       :initial-value 0
+      :group 'fen
       (binding :pull (lambda () (eta-helper:fen-read-item rest-path))
                :push (lambda (value)
                        (log:debug "Pushing value: ~a" value))
@@ -530,6 +567,7 @@ The 'qm' item represents the calculated value per day (or whatever) from the rea
 (defmacro gen-item-fen-total-last (item-sym label type initial-value)
   `(defitem ,item-sym ,label ,type
      :initial-value ,initial-value
+     :group 'fen
      :persistence '(:id :default
 		            :frequency :every-change
 		            :load-on-start t)))
@@ -537,6 +575,7 @@ The 'qm' item represents the calculated value per day (or whatever) from the rea
 (defmacro gen-item-fen-total-day (item-sym label type initial-value)
   `(defitem ,item-sym ,label ,type
      :initial-value ,initial-value
+     :group 'fen
      :persistence '(:id :default
 		            :frequency :every-change
 		            :load-on-start t)
@@ -609,8 +648,11 @@ The 'qm' item represents the calculated value per day (or whatever) from the rea
 
 ;; Plugs
 
+(defitemgroup 'steckdosen "Steckdosen")
+
 (defitem 'switch-plug-garden-south-wall
   "Steckdose Garten Süd Wand" 'boolean
+  :group 'steckdosen
   (knx-binding :ga '(:read "3/4/1" :write "3/4/0")
                :dpt "1.001"
                :call-push-p t))
@@ -618,36 +660,45 @@ The 'qm' item represents the calculated value per day (or whatever) from the rea
 
 ;; Heizstab (Keller)
 
+(defitemgroup 'heizstab "Heizstab")
+
 (defitem 'heizstab-wd1-override "Heizstab Wd1 überschreiben" 'boolean
   :initial-value 'item:false
+  :group 'heizstab
   :persistence '(:id :default
                  :frequency :every-change
                  :load-on-start t))
 (defitem 'heizstab-wd2-override "Heizstab Wd2 überschreiben" 'boolean
   :initial-value 'item:false
+  :group 'heizstab
   :persistence '(:id :default
 		         :frequency :every-change
 		         :load-on-start t))
 (defitem 'heizstab-wd3-override "Heizstab Wd3 überschreiben" 'boolean
   :initial-value 'item:false
+  :group 'heizstab
   :persistence '(:id :default
 		         :frequency :every-change
 		         :load-on-start t))
 (defitem 'heizstab-override-active "Heizstab überschreiben aktiv" 'boolean
   :initial-value 'item:false
+  :group 'heizstab
   :persistence '(:id :default
 		         :frequency :every-change
 		         :load-on-start t))
 
 (defitem 'heizstab-wd1 "Heizstab Wendel 1" 'boolean
+  :group 'heizstab
   (knx-binding :ga '(:read "3/1/2" :write "3/1/1")
 	           :dpt "1.001"
 	           :call-push-p t))
 (defitem 'heizstab-wd2 "Heizstab Wendel 2" 'boolean
+  :group 'heizstab
   (knx-binding :ga '(:read "3/1/4" :write "3/1/3")
 	           :dpt "1.001"
 	           :call-push-p t))
 (defitem 'heizstab-wd3 "Heizstab Wendel 3" 'boolean
+  :group 'heizstab
   (knx-binding :ga '(:read "3/1/6" :write "3/1/5")
 	           :dpt "1.001"
 	           :call-push-p t))
@@ -657,7 +708,7 @@ The 'qm' item represents the calculated value per day (or whatever) from the rea
 	     (hs2 (cons 'heizstab-wd2 (get-item-valueq 'heizstab-wd2)))
 	     (hs3 (cons 'heizstab-wd3 (get-item-valueq 'heizstab-wd3)))
 	     (hs-states (list hs2 hs1 hs3)) ; hs2 is main
-         (hs-override (get-item-valueq 'heizstab-override-active))
+         (hs-override (eq 'item:true (get-item-valueq 'heizstab-override-active)))
          (hs-overrides (if hs-override
                            (list (cons 'heizstab-wd1 (get-item-valueq 'heizstab-wd1-override))
                                  (cons 'heizstab-wd2 (get-item-valueq 'heizstab-wd2-override))
@@ -682,8 +733,11 @@ The 'qm' item represents the calculated value per day (or whatever) from the rea
 
 ;; Temperatures
 
+(defitemgroup 'temperatur "Temperatur")
+
 (defitem 'temp-outside
   "Temperatur aussen" 'float
+  :group 'temperatur
   (knx-binding :ga "3/2/0"
 	           :dpt "9.001"
 	           :call-push-p t)
