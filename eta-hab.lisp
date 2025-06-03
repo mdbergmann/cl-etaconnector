@@ -645,15 +645,25 @@ The 'qm' item represents the calculated value per day (or whatever) from the rea
   :initial-value 'item:false
   :group 'heizstab
   :persistence *default-persp-every-change*)
+(defitem 'heizstab-override-wd1-active "Heizstab Wd1 überschreiben aktiv" 'boolean
+  :initial-value 'item:false
+  :group 'heizstab
+  :persistence *default-persp-every-change*)
+
 (defitem 'heizstab-wd2-override "Heizstab Wd2 überschreiben" 'boolean
   :initial-value 'item:false
   :group 'heizstab
   :persistence *default-persp-every-change*)
+(defitem 'heizstab-override-wd2-active "Heizstab Wd2 überschreiben aktiv" 'boolean
+  :initial-value 'item:false
+  :group 'heizstab
+  :persistence *default-persp-every-change*)
+
 (defitem 'heizstab-wd3-override "Heizstab Wd3 überschreiben" 'boolean
   :initial-value 'item:false
   :group 'heizstab
   :persistence *default-persp-every-change*)
-(defitem 'heizstab-override-active "Heizstab überschreiben aktiv" 'boolean
+(defitem 'heizstab-override-wd3-active "Heizstab Wd3 überschreiben aktiv" 'boolean
   :initial-value 'item:false
   :group 'heizstab
   :persistence *default-persp-every-change*)
@@ -679,12 +689,16 @@ The 'qm' item represents the calculated value per day (or whatever) from the rea
 	     (hs2 (cons 'heizstab-wd2 (get-item-valueq 'heizstab-wd2)))
 	     (hs3 (cons 'heizstab-wd3 (get-item-valueq 'heizstab-wd3)))
 	     (hs-states (list hs2 hs1 hs3)) ; hs2 is main
-         (hs-override (eq 'item:true (get-item-valueq 'heizstab-override-active)))
-         (hs-overrides (if hs-override
-                           (list (cons 'heizstab-wd1 (get-item-valueq 'heizstab-wd1-override))
-                                 (cons 'heizstab-wd2 (get-item-valueq 'heizstab-wd2-override))
-                                 (cons 'heizstab-wd3 (get-item-valueq 'heizstab-wd3-override)))
-                           nil))
+         (hs-override-wd1 (eq 'item:true (get-item-valueq 'heizstab-override-wd1-active)))
+         (hs-override-wd2 (eq 'item:true (get-item-valueq 'heizstab-override-wd2-active)))
+         (hs-override-wd3 (eq 'item:true (get-item-valueq 'heizstab-override-wd3-active)))
+         (hs-overrides (append '()
+                               (when hs-override-wd1
+                                 (list (cons 'heizstab-wd1 (get-item-valueq 'heizstab-wd1-override))))
+                               (when hs-override-wd2
+                                 (list (cons 'heizstab-wd2 (get-item-valueq 'heizstab-wd2-override))))
+                               (when hs-override-wd3
+                                 (list (cons 'heizstab-wd3 (get-item-valueq 'heizstab-wd3-override))))))
          (avail-energy (- (get-item-valueq 'fen-grid-act-power))) ; negative goes to grid
          (new-states
            (eta-helper:hs-compute-new-on-off-state
