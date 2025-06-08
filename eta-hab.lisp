@@ -718,6 +718,18 @@ The 'qm' item represents the calculated value per day (or whatever) from the rea
 	    (log:info "Running new Heizstab states...")
 	    (apply-new-hs-states)))
 
+(defitemgroup 'heizstab-energy "Heizstab Energie")
+
+(defitem 'heizstab-wd1-energy "Heizstab Wendel 1 Energie Wh" 'float
+  :initial-value 0.0
+  :group '(heizstab-energy)
+  (binding :initial-delay 5
+           :delay 30
+           :pull (lambda () )
+  :persistence *default-persp-every-change*
+  :persistence '(:id :influx-1m
+                 :frequency :every-1m))
+
 ;; Temperatures
 
 (defitemgroup 'temperatur "Temperatur")
