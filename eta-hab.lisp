@@ -745,4 +745,4 @@ The 'qm' item represents the calculated value per day (or whatever) from the rea
 (log:config '(chipi-web) :warn)
 (log:config '(cl-eta) :warn)
 (log:config '(eta-hab) :warn)
-(log:config '(knx-conn) :warn)
+(log:config '(knx-conn) :info)
