@@ -18,6 +18,7 @@
                  #+:darwin (:file "ina219-if-dummy")
                  (:file "eta-ser-if")
                  (:file "solar-if")
+                 (:file "shelly-pro-3em")
                  (:file "fen-if")
                  (:file "eta-pkg")
                  (:file "eta-helper")
