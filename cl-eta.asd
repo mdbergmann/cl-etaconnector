@@ -34,6 +34,7 @@
                  (:file "openhab-dry")
                  (:file "solar-if-dry")
                  (:file "ina219-if-dry")
+                 (:file "shelly-pro-3em-dry")
                  (:file "persistence-influx-dry")
                  )))
   :description "Dry run system for cl-eta")
