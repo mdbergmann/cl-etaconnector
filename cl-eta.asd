@@ -14,7 +14,7 @@
                 :serial t
                 :components
                 ((:file "openhab")
-                 #-:darwin (:file "ina219-if")
+                 #-:darwin (:file "ina219_2-if")
                  #+:darwin (:file "ina219-if-dummy")
                  (:file "eta-ser-if")
                  (:file "solar-if")

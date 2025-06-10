@@ -734,7 +734,7 @@ The 'qm' item represents the calculated value per day (or whatever) from the rea
                               (error "Unable to read shelly pro 3em power.")))))
        :persistence *default-persp-every-change*
        :persistence '(:id :influx-1m
-                      :frequency :every-1m))))
+                      :frequency :every-change))))
 
 (gen-heizstab-energy 'heizstab-wd1-energy "Heizstab Wendel 1 Energie Wh" 0)
 (gen-heizstab-energy 'heizstab-wd2-energy "Heizstab Wendel 2 Energie Wh" 1)

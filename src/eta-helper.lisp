@@ -3,6 +3,7 @@
   (:nicknames :eta-helper)
   (:export #:ina-read
            #:ina-init
+           #:ina-close
            #:solar-read
            #:calc-solar-total
            #:fen-read-item
@@ -21,11 +22,14 @@
 ;; ----------------------------------------
 
 (defun ina-init ()
-  (log:debug "Initializing ina...")
-  (case (ina219-if:init)
+  (log:info "Initializing ina...")
+  (case (ina219_2-if:init)
     (:ok
      (progn
        (log:info "Initializing ina...done")
+       (hab:add-to-shutdown
+        (lambda ()
+          (ina-close)))
        t))
     (otherwise
      (error "Initializing ina...failed"))))
@@ -33,7 +37,7 @@
 (defun ina-read ()
   (log:debug "Reading ina currency...")
   (multiple-value-bind (stat currency)
-      (ina219-if:read-currency)
+      (ina219_2-if:read-currency)
     (log:info "Reading ina currency...done, value: ~a" currency)
     (case stat
       (:ok
@@ -42,6 +46,10 @@
            (error "Currency not a number: ~a" currency)))
       (otherwise
        (error "Read of ina not OK, value: ~a" currency)))))
+
+(defun ina-close ()
+  (log:info "Closing ina219 connection...")
+  (ina219_2-if:cleanup))
 
 ;; ----------------------------------------
 ;; solar
