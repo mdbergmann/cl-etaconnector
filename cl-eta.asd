@@ -7,7 +7,7 @@
                "drakma"
                "yason"
                "bit-smasher"
-               "py4cl"
+               "cl-pigpio"
                "fiveam"
                )
   :components ((:module "src"
