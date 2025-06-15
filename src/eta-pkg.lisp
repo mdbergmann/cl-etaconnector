@@ -137,7 +137,9 @@ If it is a full package with monitors data the return is:
 `(values :eta-monitor <alist-of-monitor-items)' where an item consists of: `(cons <item-name> <item-value>)'."
   (if (%undersized-pkg-p pkg-data)
       (values :fail "Undersized package!")
-      (let ((sid (coerce `#(,(code-char (elt pkg-data 1)) ,(code-char (elt pkg-data 2))) 'string))
+      (let ((sid (coerce `#(,(code-char (elt pkg-data 1))
+                            ,(code-char (elt pkg-data 2)))
+                         'string))
             (payload-len (elt pkg-data 3))
             (checksum (elt pkg-data 4))
             (payload (subseq pkg-data 5 (1- (length pkg-data)))))
