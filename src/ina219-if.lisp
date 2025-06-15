@@ -1,3 +1,5 @@
+;; obsolete, replaced with cl-pigpio
+
 (defpackage :cl-eta.ina219-if
   (:use :cl :py4cl)
   (:nicknames :ina219-if)
