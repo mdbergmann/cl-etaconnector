@@ -167,21 +167,31 @@ Returns monitor items, car item name, cdr item value. Or `nil' if failed."
                    (log:info "Unknown extract pkg result!")
                    nil)))))
 
-(defun %eta-read-monitors (serial-data)
-"This function is recursive, it will call itself until it receives a complete package."
+(defun %eta-read-monitors (serial-data &optional (count 0))
+  "This function is recursive, it will call itself until it has collected a complete package."
+  (when (> count 1024)
+    (error "Giving up reading from serial!"))
   (let ((read-data
-          (eta-ser-if:read-serial *eta-serial-port*)))
+          (eta-ser-if:read-serial *eta-serial-port* 500))) ; timeout 500 ms, don't block actor
+    (when (and (= count 0)
+               (or (eql read-data nil)
+                   (not (equalp read-data #(123)))))
+      (log:warn "Waiting for start package indicator...")
+      (%eta-read-monitors +eta-new-empty-data+ (1+ count))
+      (return-from %eta-read-monitors #()))
+
     (log:debug "eta read result: ~a" read-data)
     (multiple-value-bind (complete data)
         (eta-pkg:collect-data serial-data read-data)
+      (log:debug "collected data complete: ~a, data: ~a" complete data)
       (if complete
           (progn
             (log:debug "eta complete data: ~a" data)
             (%process-complete-pkg data))
           (progn
             (log:debug "eta incomplete data: ~a" data)
-            (sleep 1)
-            (%eta-read-monitors data))))))
+            (sleep .01)
+            (%eta-read-monitors data (1+ count)))))))
 
 (defun eta-read-monitors ()
   "Reads monitor data from serial port.

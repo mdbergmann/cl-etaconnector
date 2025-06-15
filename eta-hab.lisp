@@ -179,36 +179,41 @@
       (when (and item proc-m)
         (funcall apply-fun item monitor-value)))))
 
+(defun read-eta-monitors ()
+  (log:info "Read ETA...")
+  (tasks:task-start
+   (lambda ()
+	 (let ((monitors (eta-helper:eta-read-monitors)))
+	   (apply-monitors monitors
+		               (lambda (item value)
+		                 (item:set-value item value)))))))
+
 (defrule "Read-ETA-serial"
-  :when-cron '(:minute :every)
-  :do (lambda (trigger)
-        (declare (ignore trigger))
-	(tasks:task-start
-	 (lambda ()
-	   (let ((monitors (eta-helper:eta-read-monitors)))
-	     (apply-monitors monitors
-			     (lambda (item value)
-			       (item:set-value item value))))))))
+    :when-cron '(:minute :every)
+    :do (lambda (trigger)
+          (declare (ignore trigger))
+          (read-eta-monitors)))
 
 (defun calc-daily-eta-op-hours-weekly ()
   (log:info "Trigger calc daily eta op hours")
   (let ((item (get-item 'eta-op-hours-day-weekly))
         (eta-op-hours-item (get-item 'eta-op-hours))
-	(influx-persp (get-persistence :influx)))
+	    (influx-persp (get-persistence :influx)))
     (future:fcompleted
         (item:get-value eta-op-hours-item)
         (current-hours)
       (future:fcompleted
-	  (persp:fetch influx-persp
-		       eta-op-hours-item
-		       (persp:make-relative-range :days 7))
-	  (values)
-	(let* ((last (persp:persisted-item-value (first values)))
-	       (diff (- current-hours last))
-	       (avg (round (/ diff 7))))
-	  (log:info "Current-hours: ~a, last week: ~a, diff: ~a, avg: ~a" current-hours last diff avg)
-	  (item:set-value item avg)
-	  )))))
+	      (persp:fetch influx-persp
+		               eta-op-hours-item
+		               (persp:make-relative-range :days 7))
+	      (values)
+	    (let* ((last (persp:persisted-item-value (first values)))
+	           (diff (- current-hours last))
+	           (avg (round (/ diff 7))))
+	      (log:info "Current-hours: ~a, last week: ~a, diff: ~a, avg: ~a"
+                    current-hours last diff avg)
+	      (item:set-value item avg)
+	      )))))
       
 (defrule "Calculate Daily OP hours - weekly"
   :when-cron '(:minute 55 :hour 23 :day-of-week 6)
