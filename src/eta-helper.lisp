@@ -200,13 +200,22 @@ Returns monitor items, car item name, cdr item value. Or `nil' if failed."
 (defparameter *hs-on-threshold* 600
   "Threshold on top of `*hs-energy*' until switched on.")
 
-(defun hs-compute-new-on-off-state (hs-states avail-energy &optional (hs-overrides nil))
+(defun hs-compute-new-on-off-state (hs-states avail-energy
+                                    &optional
+                                      (hs-overrides nil)
+                                      (hs-off nil))
   "Calculates new on/off states for the Heizstäbe.
 Since we only know the currently available energy (in Watt) (that is pushed to grid),
 we have to substract the amount of energy that is currently consumed by the Heizstab
 in order to determine what should be their next state.
+Provide `hs-off' to turn HS off completely.
 
 Returns alist of Heizstab symbol and new state."
+  (when hs-off
+    (return-from hs-compute-new-on-off-state
+      (mapcar (lambda (hs)
+                (cons (car hs) 'item:false))
+              hs-states)))
   (let* ((hs-needed-energy (+ *hs-energy* *hs-on-threshold*))
 	     (hs-symbols (mapcar #'car hs-states))
 	     (hs-switch-states (mapcar #'cdr hs-states))
@@ -326,3 +335,15 @@ Returns alist of Heizstab symbol and new state."
                (+ (* *hs-energy* 2) (* *hs-on-threshold* 2))
                '((heizstab-wd1 . item:false))
                ))))
+
+(test hs-complete-off
+  (is (equalp '((heizstab-wd2 . item:false)
+                (heizstab-wd1 . item:false)
+                (heizstab-wd3 . item:false))
+              (hs-compute-new-on-off-state
+               '((heizstab-wd2 . item:false)
+		         (heizstab-wd1 . item:false)
+		         (heizstab-wd3 . item:false))
+               10000 ; enough every to activate all
+               nil
+               t))))

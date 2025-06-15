@@ -686,6 +686,11 @@ The 'qm' item represents the calculated value per day (or whatever) from the rea
 	           :dpt "1.001"
 	           :call-push-p t))
 
+(defvar *hs-max-temp-off* nil
+  "`T' when HS had been switched off due to max temp reached.")
+(defparameter *hs-on-max-temp-off* 66.0)
+(defparameter *hs-max-temp-off-lower-bound* 60.0)
+
 (defun apply-new-hs-states ()
   (let* ((hs1 (cons 'heizstab-wd1 (get-item-valueq 'heizstab-wd1)))
 	     (hs2 (cons 'heizstab-wd2 (get-item-valueq 'heizstab-wd2)))
@@ -694,22 +699,33 @@ The 'qm' item represents the calculated value per day (or whatever) from the rea
          (hs-override-wd1 (eq 'item:true (get-item-valueq 'heizstab-override-wd1-active)))
          (hs-override-wd2 (eq 'item:true (get-item-valueq 'heizstab-override-wd2-active)))
          (hs-override-wd3 (eq 'item:true (get-item-valueq 'heizstab-override-wd3-active)))
-         (hs-overrides (append '()
-                               (when hs-override-wd1
-                                 (list (cons 'heizstab-wd1 (get-item-valueq 'heizstab-wd1-override))))
-                               (when hs-override-wd2
-                                 (list (cons 'heizstab-wd2 (get-item-valueq 'heizstab-wd2-override))))
-                               (when hs-override-wd3
-                                 (list (cons 'heizstab-wd3 (get-item-valueq 'heizstab-wd3-override))))))
+         (hs-overrides
+           (append '()
+                   (when hs-override-wd1
+                     (list (cons 'heizstab-wd1 (get-item-valueq 'heizstab-wd1-override))))
+                   (when hs-override-wd2
+                     (list (cons 'heizstab-wd2 (get-item-valueq 'heizstab-wd2-override))))
+                   (when hs-override-wd3
+                     (list (cons 'heizstab-wd3 (get-item-valueq 'heizstab-wd3-override))))))
          (avail-energy (- (get-item-valueq 'fen-grid-act-power))) ; negative goes to grid
+         (eta-temp-puffer-oben (get-item-valueq 'eta-temp-puffer-oben))
+         (hs-off (or (>= eta-temp-puffer-oben *hs-on-max-temp-off*)
+                     (and *hs-max-temp-off*
+                          (>= eta-temp-puffer-oben
+                              *hs-max-temp-off-lower-bound*))))
          (new-states
            (eta-helper:hs-compute-new-on-off-state
-            hs-states avail-energy hs-overrides)))
-	    (log:info "current-states: ~a, avail-energy: ~a, new-states: ~a, overrides: ~a"
-		          hs-states avail-energy new-states hs-overrides)
-	    (dolist (new-state new-states)
-	      (destructuring-bind (hs . state) new-state
-	        (set-item-value hs state)))))
+            hs-states avail-energy hs-overrides hs-off)))
+    (log:info "current-states: ~a, avail-energy: ~a, new-states: ~a, overrides: ~a"
+              hs-states avail-energy new-states hs-overrides)
+    (when (not (eql *hs-max-temp-off* hs-off))
+      (if hs-off
+          (log:warn "Heizstab overtemp (~a), switching off!" eta-temp-puffer-oben)
+          (log:warn "Puffer cool down (~a), Heizstab may run again." eta-temp-puffer-oben)))
+    (setf *hs-max-temp-off* hs-off)
+    (dolist (new-state new-states)
+      (destructuring-bind (hs . state) new-state
+        (set-item-value hs state)))))
 
 (defrule "New on/off state of Heizstab"
   :when-cron '(:minute :every :step-min 15)
@@ -736,9 +752,9 @@ The 'qm' item represents the calculated value per day (or whatever) from the rea
        :persistence '(:id :influx-1m
                       :frequency :every-change))))
 
-(gen-heizstab-energy 'heizstab-wd1-energy "Heizstab Wendel 1 Energie Wh" 0)
+(gen-heizstab-energy 'heizstab-wd1-energy "Heizstab Wendel 1 Energie Wh" 2)
 (gen-heizstab-energy 'heizstab-wd2-energy "Heizstab Wendel 2 Energie Wh" 1)
-(gen-heizstab-energy 'heizstab-wd3-energy "Heizstab Wendel 3 Energie Wh" 2)
+(gen-heizstab-energy 'heizstab-wd3-energy "Heizstab Wendel 3 Energie Wh" 0)
 
 ;; Temperatures
 

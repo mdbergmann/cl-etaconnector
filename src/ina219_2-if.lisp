@@ -96,7 +96,7 @@
       (let ((raw-current (%read-current-raw)))
         (incf total (%raw-to-current raw-current)))
       ;; Small delay between readings
-      (sleep 0.01))
+      (sleep 0.05))
     (/ total times)))
 
 (defun read-currency ()
