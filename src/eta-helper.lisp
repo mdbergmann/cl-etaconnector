@@ -23,7 +23,7 @@
 
 (defun ina-init ()
   (log:info "Initializing ina...")
-  (case (ina219_2-if:init)
+  (case (ina219-if:init)
     (:ok
      (progn
        (log:info "Initializing ina...done")
@@ -37,7 +37,7 @@
 (defun ina-read ()
   (log:debug "Reading ina currency...")
   (multiple-value-bind (stat currency)
-      (ina219_2-if:read-currency)
+      (ina219-if:read-currency)
     (log:info "Reading ina currency...done, value: ~a" currency)
     (case stat
       (:ok
@@ -49,7 +49,7 @@
 
 (defun ina-close ()
   (log:info "Closing ina219 connection...")
-  (ina219_2-if:cleanup))
+  (ina219-if:cleanup))
 
 ;; ----------------------------------------
 ;; solar

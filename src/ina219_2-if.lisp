@@ -1,11 +1,11 @@
-(defpackage :cl-eta.ina219_2-if
+(defpackage :cl-eta.ina219-if
   (:use :cl)
-  (:nicknames :ina219_2-if)
+  (:nicknames :ina219-if)
   (:export #:init
            #:read-currency
            #:cleanup))
 
-(in-package :cl-eta.ina219_2-if)
+(in-package :cl-eta.ina219-if)
 
 ;; INA219 Constants
 (defparameter *ina219-address* #x40)  ; Default I2C address

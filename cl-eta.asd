@@ -7,7 +7,7 @@
                "drakma"
                "yason"
                "bit-smasher"
-               "cl-pigpio"
+               #-:darwin "cl-pigpio"
                "fiveam"
                )
   :components ((:module "src"
